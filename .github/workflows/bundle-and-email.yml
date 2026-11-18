@@ -1,0 +1,71 @@
+name: Bundle and Email to GHE
+on:
+  workflow_dispatch:
+    inputs:
+      part_size_mb:
+        description: "Raw size of each bundle part in MB. base64 adds ~37%, so 7 keeps each mail under 10MB"
+        required: false
+        default: "7"
+
+jobs:
+  bundle-and-send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create bundle
+        run: git bundle create repo.bundle --all
+
+      - name: Split bundle
+        env:
+          PART_SIZE_MB: ${{ inputs.part_size_mb || '7' }}
+        run: |
+          mkdir parts
+          split -b "${PART_SIZE_MB}m" -d -a 2 repo.bundle parts/repo.bundle.part-
+          sha256sum repo.bundle | cut -d' ' -f1 > bundle.sha256
+          ls -l repo.bundle parts/
+          echo "bundle sha256: $(cat bundle.sha256)"
+
+      - name: Send parts by email
+        env:
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'EOF'
+          import hashlib, os, pathlib, smtplib, time
+          from email.message import EmailMessage
+
+          parts = sorted(pathlib.Path("parts").iterdir())
+          total = len(parts)
+          bundle_sha = pathlib.Path("bundle.sha256").read_text().strip()
+          sha = os.environ["COMMIT_SHA"]
+          user = os.environ["MAIL_USERNAME"]
+          howto = (
+              "Reassemble after receiving all parts:\n"
+              "  cat repo.bundle.part-* > repo.bundle\n"
+              f"  sha256sum repo.bundle   # expect {bundle_sha}\n"
+              "  git bundle verify repo.bundle\n"
+              "  git fetch repo.bundle 'refs/heads/*:refs/heads/*'\n"
+          )
+          with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+              smtp.login(user, os.environ["MAIL_PASSWORD"])
+              for i, part in enumerate(parts, 1):
+                  data = part.read_bytes()
+                  msg = EmailMessage()
+                  msg["Subject"] = f"Git bundle - {sha} - part {i}/{total}"
+                  msg["From"] = f"GitHub Actions <{user}>"
+                  msg["To"] = os.environ["MAIL_TO"]
+                  msg.set_content(
+                      f"Part {i} of {total}: {part.name} ({len(data)} bytes)\n"
+                      f"Part sha256: {hashlib.sha256(data).hexdigest()}\n"
+                      f"Whole bundle sha256: {bundle_sha}\n\n" + howto
+                  )
+                  msg.add_attachment(data, maintype="application", subtype="octet-stream", filename=part.name)
+                  smtp.send_message(msg)
+                  print(f"sent part {i}/{total}: {part.name} ({len(data)} bytes)")
+                  time.sleep(5)
+          EOF
