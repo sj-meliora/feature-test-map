@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<title>Feature-Test Map 레코드 관계도</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* 배치: DB 도구의 스키마 뷰. 위에 테이블 카드와 참조선을 그린 캔버스, 그 아래에 범례, 참조 목록, 제약을 둔다. */
+:root {
+  --bg: #f7f8fa;
+  --canvas: #eef3f9;
+  --card: #ffffff;
+  --ink: #1f2937;
+  --body: #4b5563;
+  --muted: #6b7280;
+  --line: #d3dbe5;
+  --dot: #cbd5e1;
+  --accent: #2b6cb0;
+  --navy: #1e3a5f;
+  --slate: #46658c; --slate-line: #8ea7c6; --slate-soft: #e2e9f2;
+  --brown: #9a6b45; --brown-line: #c9a17e; --brown-soft: #f3e9df;
+  --green: #4f7f73; --green-line: #8fb5aa; --green-soft: #e4eeea;
+  --sans: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", Arial, sans-serif;
+  --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121a25; --canvas: #17212e; --card: #1e2a39; --ink: #e6ebf2; --body: #c4cdd9; --muted: #94a3b8;
+    --line: #33435a; --dot: #2c3a4e; --accent: #73a9e8; --navy: #b9d2f0;
+    --slate: #a3bfe0; --slate-line: #4d6a8e; --slate-soft: #24364c;
+    --brown: #d9ae86; --brown-line: #7f6148; --brown-soft: #392e25;
+    --green: #8fc7b9; --green-line: #4f7f73; --green-soft: #1f3632; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121a25; --canvas: #17212e; --card: #1e2a39; --ink: #e6ebf2; --body: #c4cdd9; --muted: #94a3b8;
+  --line: #33435a; --dot: #2c3a4e; --accent: #73a9e8; --navy: #b9d2f0;
+  --slate: #a3bfe0; --slate-line: #4d6a8e; --slate-soft: #24364c;
+  --brown: #d9ae86; --brown-line: #7f6148; --brown-soft: #392e25;
+  --green: #8fc7b9; --green-line: #4f7f73; --green-soft: #1f3632; color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--sans);
+  font-size: 14px; line-height: 1.6;
+  padding-block: 28px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1440px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: grid; grid-template-columns: 6px minmax(0, 1fr); gap: 0 14px; align-items: stretch; }
+header::before { content: ""; background: var(--accent); border-radius: 3px; }
+header div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }
+h1 { font-size: 22px; font-weight: 700; margin: 0; }
+header p { margin: 0; color: var(--accent); font-size: 15px; font-weight: 600; }
+figure { margin: 0; background: var(--canvas); border: 1px solid var(--line); border-radius: 12px; min-width: 0; overflow: hidden; }
+.scroll { overflow-x: auto; }
+.scroll > svg { display: block; width: 100%; min-width: 1080px; height: auto; }
+
+/* 범례 */
+figcaption { border-top: 1px solid var(--line); background: var(--card); padding: 14px 18px; display: grid; gap: 12px; }
+dl.keys { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 28px; }
+dl.keys > div { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 12px; align-items: start; }
+dl.keys dt { margin: 0; padding-top: 2px; }
+dl.keys dd { margin: 0; font-size: 13.5px; color: var(--body); }
+dl.keys dd b { color: var(--ink); font-weight: 700; }
+dl.keys dd span { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.marks { display: flex; flex-wrap: wrap; gap: 6px 22px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--line); padding-top: 10px; }
+.marks > span { display: inline-flex; align-items: center; gap: 7px; }
+.k { font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 2px 6px; border-radius: 3px; display: inline-block; line-height: 1.3; }
+.k.pk { background: var(--accent); color: var(--card); }
+.k.fk { background: var(--slate-soft); color: var(--slate); }
+.k.fl { color: var(--muted); border: 1px solid var(--line); font-weight: 400; }
+.chip { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid; }
+.chip.y { background: var(--slate-soft); border-color: var(--slate-line); }
+.chip.j { background: var(--brown-soft); border-color: var(--brown-line); }
+.chip.v { background: var(--green-soft); border-color: var(--green-line); border-style: dashed; }
+.sw { width: 22px; height: 0; border-top: 2px solid var(--accent); }
+.sw.v { border-top: 2px dashed var(--green); }
+
+/* 캔버스 */
+svg text { font-family: var(--sans); fill: var(--ink); }
+.dot { fill: var(--dot); }
+.card { fill: var(--card); stroke: none; }
+.card.edge { fill: none; stroke-width: 1.6; }
+.card.edge.yaml { stroke: var(--slate-line); }
+.card.edge.jsonl { stroke: var(--brown-line); }
+.card.edge.view { stroke: var(--green-line); stroke-dasharray: 6 4; }
+.head.yaml { fill: var(--slate-soft); }
+.head.jsonl { fill: var(--brown-soft); }
+.head.view { fill: var(--green-soft); }
+.sep { stroke: var(--line); stroke-width: 1; }
+svg text.tname { font-size: 14.5px; font-weight: 700; }
+svg text.tname.yaml { fill: var(--slate); }
+svg text.tname.jsonl { fill: var(--brown); }
+svg text.tname.view { fill: var(--green); }
+.tagbox { fill: var(--card); stroke-width: 1; }
+.tagbox.yaml { stroke: var(--slate-line); }
+.tagbox.jsonl { stroke: var(--brown-line); }
+.tagbox.view { stroke: var(--green-line); }
+svg text.tag { font-family: var(--mono); font-size: 10.5px; font-weight: 600; }
+svg text.tag.yaml { fill: var(--slate); }
+svg text.tag.jsonl { fill: var(--brown); }
+svg text.tag.view { fill: var(--green); }
+.kbox.pk { fill: var(--accent); }
+.kbox.fk { fill: var(--slate-soft); }
+svg text.ktxt { font-family: var(--mono); font-size: 10.5px; font-weight: 600; }
+svg text.ktxt.pk { fill: var(--card); }
+svg text.ktxt.fk { fill: var(--slate); }
+svg text.col { font-size: 13px; fill: var(--ink); }
+svg text.col.pk { font-weight: 700; }
+svg text.typ { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+svg text.flg { font-family: var(--mono); font-size: 10px; fill: var(--muted); }
+svg text.meta { font-size: 12px; fill: var(--muted); }
+.rel { fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linecap: round; }
+svg text.card1 { font-family: var(--mono); font-size: 11.5px; font-weight: 600; fill: var(--accent); }
+.src { fill: none; stroke: var(--green); stroke-width: 1.5; stroke-dasharray: 6 4; }
+svg text.vcap { font-size: 12px; font-weight: 500; fill: var(--green); }
+
+/* 아래 표 */
+.grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 20px; }
+section { min-width: 0; }
+h2 { font-size: 15px; font-weight: 700; margin: 0 0 10px; color: var(--navy); }
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 700; font-size: 12px; color: var(--slate); background: var(--slate-soft); white-space: nowrap; }
+td { color: var(--body); }
+td.m { font-family: var(--mono); font-size: 12px; white-space: nowrap; color: var(--accent); font-weight: 600; }
+td.ref { white-space: nowrap; color: var(--ink); }
+td.ref b { font-weight: 700; }
+td.ref i { font-style: normal; color: var(--muted); }
+ul.rules { margin: 0; padding: 0; list-style: none; display: grid; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+ul.rules li { padding: 10px 16px; border-bottom: 1px solid var(--line); font-size: 13.5px; display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 12px; color: var(--body); }
+ul.rules li:last-child { border-bottom: 0; }
+ul.rules b { font-weight: 700; font-size: 13px; color: var(--accent); }
+p.foot { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 90ch; }
+@media (max-width: 860px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  dl.keys { grid-template-columns: minmax(0, 1fr); }
+  ul.rules li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>레코드 관계도</h1>
+      <p>Feature-Test Map · 테이블 네 개의 구조와 참조 관계</p>
+    </div>
+  </header>
+
+  <figure>
+    <div class="scroll">
+<svg viewBox="0 0 1440 500" role="img" aria-label="테이블 네 개와 뷰 하나의 구조와 관계. 인스턴스 시나리오는 기능 ID로 기능을 참조하고, 시나리오-TC 관계는 인스턴스 시나리오와 TC를 각각 참조한다. 기능은 부모 ID로 자기 자신을 참조한다.">
+<defs><pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle class="dot" cx="1" cy="1" r="1"/></pattern></defs>
+<rect x="0" y="0" width="1440" height="500" fill="url(#dots)"/>
+<text class="meta" x="72" y="52">100개 미만</text>
+<rect class="card yaml" x="70" y="64" width="270" height="232" rx="6"/>
+<path class="head yaml" d="M70,104 V70 a6,6 0 0 1 6,-6 H334 a6,6 0 0 1 6,6 V104 Z"/>
+<text class="tname yaml" x="84" y="89">기능</text>
+<rect class="tagbox yaml" x="286" y="75" width="42" height="18" rx="9"/><text class="tag yaml" x="307.0" y="88" text-anchor="middle">YAML</text>
+<rect class="kbox pk" x="80" y="111" width="28" height="18" rx="3"/><text class="ktxt pk" x="94" y="124" text-anchor="middle">PK</text>
+<text class="col pk" x="120" y="124.5">ID</text>
+<text class="typ" x="328" y="124" text-anchor="end">TEXT</text>
+<line class="sep" x1="71" y1="136" x2="339" y2="136"/>
+<text class="col" x="120" y="156.5">이름</text>
+<text class="typ" x="328" y="156" text-anchor="end">TEXT</text>
+<line class="sep" x1="71" y1="168" x2="339" y2="168"/>
+<text class="col" x="120" y="188.5">계층 경로</text>
+<text class="typ" x="328" y="188" text-anchor="end">TEXT</text>
+<line class="sep" x1="71" y1="200" x2="339" y2="200"/>
+<rect class="kbox fk" x="80" y="207" width="28" height="18" rx="3"/><text class="ktxt fk" x="94" y="220" text-anchor="middle">FK</text>
+<text class="col" x="120" y="220.5">부모 ID</text>
+<text class="typ" x="328" y="220" text-anchor="end">TEXT</text>
+<text class="flg" x="291" y="220" text-anchor="end">NULL</text>
+<line class="sep" x1="71" y1="232" x2="339" y2="232"/>
+<text class="col" x="120" y="252.5">자연어 설명</text>
+<text class="typ" x="328" y="252" text-anchor="end">TEXT</text>
+<line class="sep" x1="71" y1="264" x2="339" y2="264"/>
+<text class="col" x="120" y="284.5">IMS 원본 위치</text>
+<text class="typ" x="328" y="284" text-anchor="end">TEXT</text>
+<rect class="card edge yaml" x="70" y="64" width="270" height="232" rx="6"/>
+<text class="meta" x="432" y="52">기능마다 1개에서 시작</text>
+<rect class="card yaml" x="430" y="64" width="270" height="232" rx="6"/>
+<path class="head yaml" d="M430,104 V70 a6,6 0 0 1 6,-6 H694 a6,6 0 0 1 6,6 V104 Z"/>
+<text class="tname yaml" x="444" y="89">인스턴스 시나리오</text>
+<rect class="tagbox yaml" x="646" y="75" width="42" height="18" rx="9"/><text class="tag yaml" x="667.0" y="88" text-anchor="middle">YAML</text>
+<rect class="kbox pk" x="440" y="111" width="28" height="18" rx="3"/><text class="ktxt pk" x="454" y="124" text-anchor="middle">PK</text>
+<text class="col pk" x="480" y="124.5">ID</text>
+<text class="typ" x="688" y="124" text-anchor="end">TEXT</text>
+<line class="sep" x1="431" y1="136" x2="699" y2="136"/>
+<rect class="kbox fk" x="440" y="143" width="28" height="18" rx="3"/><text class="ktxt fk" x="454" y="156" text-anchor="middle">FK</text>
+<text class="col" x="480" y="156.5">기능 ID</text>
+<text class="typ" x="688" y="156" text-anchor="end">TEXT</text>
+<line class="sep" x1="431" y1="168" x2="699" y2="168"/>
+<text class="col" x="480" y="188.5">자극</text>
+<text class="typ" x="688" y="188" text-anchor="end">TEXT</text>
+<line class="sep" x1="431" y1="200" x2="699" y2="200"/>
+<text class="col" x="480" y="220.5">환경</text>
+<text class="typ" x="688" y="220" text-anchor="end">TEXT</text>
+<line class="sep" x1="431" y1="232" x2="699" y2="232"/>
+<text class="col" x="480" y="252.5">응답</text>
+<text class="typ" x="688" y="252" text-anchor="end">TEXT</text>
+<line class="sep" x1="431" y1="264" x2="699" y2="264"/>
+<text class="col" x="480" y="284.5">응답 측정</text>
+<text class="typ" x="688" y="284" text-anchor="end">TEXT</text>
+<rect class="card edge yaml" x="430" y="64" width="270" height="232" rx="6"/>
+<text class="meta" x="792" y="52">TC 수 이상</text>
+<rect class="card jsonl" x="790" y="64" width="280" height="104" rx="6"/>
+<path class="head jsonl" d="M790,104 V70 a6,6 0 0 1 6,-6 H1064 a6,6 0 0 1 6,6 V104 Z"/>
+<text class="tname jsonl" x="804" y="89">시나리오-TC 관계</text>
+<rect class="tagbox jsonl" x="1009" y="75" width="49" height="18" rx="9"/><text class="tag jsonl" x="1033.5" y="88" text-anchor="middle">JSONL</text>
+<rect class="kbox pk" x="800" y="111" width="28" height="18" rx="3"/><text class="ktxt pk" x="814" y="124" text-anchor="middle">PK</text>
+<rect class="kbox fk" x="832" y="111" width="28" height="18" rx="3"/><text class="ktxt fk" x="846" y="124" text-anchor="middle">FK</text>
+<text class="col pk" x="872" y="124.5">인스턴스 시나리오 ID</text>
+<text class="typ" x="1058" y="124" text-anchor="end">TEXT</text>
+<line class="sep" x1="791" y1="136" x2="1069" y2="136"/>
+<rect class="kbox pk" x="800" y="143" width="28" height="18" rx="3"/><text class="ktxt pk" x="814" y="156" text-anchor="middle">PK</text>
+<rect class="kbox fk" x="832" y="143" width="28" height="18" rx="3"/><text class="ktxt fk" x="846" y="156" text-anchor="middle">FK</text>
+<text class="col pk" x="872" y="156.5">TC ID</text>
+<text class="typ" x="1058" y="156" text-anchor="end">INTEGER</text>
+<rect class="card edge jsonl" x="790" y="64" width="280" height="104" rx="6"/>
+<text class="meta" x="1132" y="52">최대 5천 개</text>
+<rect class="card jsonl" x="1130" y="64" width="270" height="168" rx="6"/>
+<path class="head jsonl" d="M1130,104 V70 a6,6 0 0 1 6,-6 H1394 a6,6 0 0 1 6,6 V104 Z"/>
+<text class="tname jsonl" x="1144" y="89">TC</text>
+<rect class="tagbox jsonl" x="1339" y="75" width="49" height="18" rx="9"/><text class="tag jsonl" x="1363.5" y="88" text-anchor="middle">JSONL</text>
+<rect class="kbox pk" x="1140" y="111" width="28" height="18" rx="3"/><text class="ktxt pk" x="1154" y="124" text-anchor="middle">PK</text>
+<text class="col pk" x="1180" y="124.5">ID</text>
+<text class="typ" x="1388" y="124" text-anchor="end">INTEGER</text>
+<line class="sep" x1="1131" y1="136" x2="1399" y2="136"/>
+<text class="col" x="1180" y="156.5">suite</text>
+<text class="typ" x="1388" y="156" text-anchor="end">TEXT</text>
+<text class="flg" x="1351" y="156" text-anchor="end">UQ</text>
+<line class="sep" x1="1131" y1="168" x2="1399" y2="168"/>
+<text class="col" x="1180" y="188.5">TC 이름</text>
+<text class="typ" x="1388" y="188" text-anchor="end">TEXT</text>
+<text class="flg" x="1351" y="188" text-anchor="end">UQ</text>
+<line class="sep" x1="1131" y1="200" x2="1399" y2="200"/>
+<text class="col" x="1180" y="220.5">소스 코드 이름</text>
+<text class="typ" x="1388" y="220" text-anchor="end">TEXT</text>
+<rect class="card edge jsonl" x="1130" y="64" width="270" height="168" rx="6"/>
+<path class="rel" d="M340,120 H377.0 q8,0 8,8 V144 q0,8 8,8 H430"/><line class="rel" x1="349" y1="114" x2="349" y2="126"/><text class="card1" x="358" y="111" text-anchor="middle">1</text><path class="rel" d="M418,152 L430,146 M418,152 L430,158"/><text class="card1" x="410" y="143" text-anchor="middle">N</text>
+<path class="rel" d="M700,120 H790"/><line class="rel" x1="709" y1="114" x2="709" y2="126"/><text class="card1" x="718" y="111" text-anchor="middle">1</text><path class="rel" d="M778,120 L790,114 M778,120 L790,126"/><text class="card1" x="770" y="111" text-anchor="middle">N</text>
+<path class="rel" d="M1130,120 H1108.0 q-8,0 -8,8 V144 q0,8 -8,8 H1070"/><line class="rel" x1="1121" y1="114" x2="1121" y2="126"/><text class="card1" x="1112" y="111" text-anchor="middle">1</text><path class="rel" d="M1082,152 L1070,146 M1082,152 L1070,158"/><text class="card1" x="1090" y="143" text-anchor="middle">N</text>
+<path class="rel" d="M70,216 H40 q-8,0 -8,-8 V128 q0,-8 8,-8 H70"/><path class="rel" d="M58,216 L70,210 M58,216 L70,222"/><text class="card1" x="50" y="207" text-anchor="middle">N</text>
+<line class="rel" x1="61" y1="114" x2="61" y2="126"/><text class="card1" x="48" y="111" text-anchor="middle">0..1</text>
+<rect class="card view" x="540" y="356" width="290" height="104" rx="6"/>
+<path class="head view" d="M540,396 V362 a6,6 0 0 1 6,-6 H824 a6,6 0 0 1 6,6 V396 Z"/>
+<text class="tname view" x="554" y="381">기능별 TC 개수</text>
+<rect class="tagbox view" x="776" y="367" width="42" height="18" rx="9"/><text class="tag view" x="797.0" y="380" text-anchor="middle">VIEW</text>
+<text class="col" x="590" y="416.5">기능 ID</text>
+<text class="typ" x="818" y="416" text-anchor="end">TEXT</text>
+<line class="sep" x1="541" y1="428" x2="829" y2="428"/>
+<text class="col" x="590" y="448.5">TC 개수</text>
+<text class="typ" x="818" y="448" text-anchor="end">INTEGER</text>
+<rect class="card edge view" x="540" y="356" width="290" height="104" rx="6"/>
+<path class="src" d="M205,296 V420 q0,8 8,8 H540"/>
+<path class="src" d="M565,296 V356"/>
+<path class="src" d="M930,168 V420 q0,8 -8,8 H830"/>
+<text class="vcap" x="685.0" y="480" text-anchor="middle">세 테이블을 조인하여 계산 · 저장하지 않음</text>
+</svg>
+    </div>
+    <figcaption>
+      <dl class="keys">
+        <div>
+          <dt><span class="k pk">PK</span></dt>
+          <dd><b>기본 키</b> <span>Primary Key</span><br>테이블 안에서 레코드 하나를 식별하는 항목이다. 같은 테이블 안에서 값이 겹치지 않는다.</dd>
+        </div>
+        <div>
+          <dt><span class="k fk">FK</span></dt>
+          <dd><b>외래 키</b> <span>Foreign Key</span><br>다른 레코드의 기본 키를 값으로 가지는 항목이다. 이 레코드가 어느 레코드와 연결되는지를 나타낸다.</dd>
+        </div>
+      </dl>
+      <div class="marks">
+        <span><span class="k pk">PK</span><span class="k fk">FK</span>두 외래 키의 조합이 기본 키</span>
+        <span><span class="k fl">NULL</span>비어 있을 수 있음</span>
+        <span><span class="k fl">UQ</span>조합이 중복되지 않음</span>
+        <span><span class="sw"></span>참조. 1과 N은 양쪽 레코드의 대응 수</span>
+        <span><span class="chip y"></span>사람이 작성하는 테이블 (YAML)</span>
+        <span><span class="chip j"></span>도구가 생성하는 테이블 (JSONL)</span>
+        <span><span class="chip v"></span>뷰</span>
+        <span><span class="sw v"></span>뷰가 읽는 테이블</span>
+      </div>
+    </figcaption>
+  </figure>
+
+  <div class="grid">
+    <section>
+      <h2>참조</h2>
+      <div class="tbl">
+        <table>
+          <tr><th>참조하는 항목 (FK)</th><th>참조되는 항목 (PK)</th><th>대응</th><th>의미</th></tr>
+          <tr><td class="ref"><b>인스턴스 시나리오</b><i> . </i>기능 ID</td><td class="ref"><b>기능</b><i> . </i>ID</td><td class="m">N : 1</td><td>인스턴스 시나리오는 기능 하나에만 속한다.</td></tr>
+          <tr><td class="ref"><b>시나리오-TC 관계</b><i> . </i>인스턴스 시나리오 ID</td><td class="ref"><b>인스턴스 시나리오</b><i> . </i>ID</td><td class="m">N : 1</td><td rowspan="2">두 참조를 합하면 인스턴스 시나리오와 TC는 다대다 관계다. 관계 레코드 하나는 TC 하나가 인스턴스 시나리오 하나를 검증한다는 연결 하나다. 두 항목의 조합이 기본 키이므로 같은 연결은 하나만 저장된다.</td></tr>
+          <tr><td class="ref"><b>시나리오-TC 관계</b><i> . </i>TC ID</td><td class="ref"><b>TC</b><i> . </i>ID</td><td class="m">N : 1</td></tr>
+          <tr><td class="ref"><b>기능</b><i> . </i>부모 ID</td><td class="ref"><b>기능</b><i> . </i>ID</td><td class="m">N : 0..1</td><td>상위 항목을 가리킨다. 최상위 항목은 값이 비어 있다.</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>제약과 규칙</h2>
+      <ul class="rules">
+        <li><b>검증 대상</b><span>자식 항목이 없는 말단 기능만 검증 대상이며, 인스턴스 시나리오는 말단 기능에만 둔다.</span></li>
+        <li><b>TC의 ID</b><span>일련번호다. 목록을 다시 추출할 때 suite와 TC 이름이 같은 TC는 기존 번호를 유지한다.</span></li>
+        <li><b>기능과 TC</b><span>둘을 직접 잇는 테이블은 없다. 인스턴스 시나리오를 거쳐 구하며, 기능별 TC 개수는 뷰로 정의한다.</span></li>
+        <li><b>시나리오 추가</b><span>새 인스턴스 시나리오에 해당하는 TC는 기존 시나리오와의 연결을 새 시나리오로 옮긴다.</span></li>
+        <li><b>원본</b><span>YAML과 JSONL 파일이 원본이며, 조회용 SQLite 데이터베이스는 원본에서 생성한다.</span></li>
+      </ul>
+    </section>
+  </div>
+
+  <p class="foot">항목 이름은 DESIGN.md의 표기를 따른다. 자료형은 SQLite를 기준으로 한 제안이며 확정된 내용이 아니다. 뷰의 이름과 항목도 제안이다. 기준: DESIGN.md의 DP-1부터 DP-5까지와 DP-7.</p>
+</div>
+</body>
+</html>
