@@ -7,16 +7,17 @@
 <title>Feature-Test Map 레코드 관계도</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;600;700&display=swap">
 <style>
+/* 색: 인증 발표 자료와 같은 밝은 단일 테마. 어두운 테마를 따로 두지 않는다. */
 /* 배치: DB 도구의 스키마 뷰. 위에 테이블 카드와 참조선을 그린 캔버스, 그 아래에 범례, 참조 목록, 제약을 둔다. */
 :root {
   --bg: #f7f8fa;
-  --canvas: #eef3f9;
+  --canvas: #f7f8fa;
   --card: #ffffff;
   --ink: #1f2937;
   --body: #4b5563;
   --muted: #6b7280;
   --line: #d3dbe5;
-  --dot: #cbd5e1;
+  --dot: #e3e8ee;
   --accent: #2b6cb0;
   --navy: #1e3a5f;
   --slate: #46658c; --slate-line: #8ea7c6; --slate-soft: #e2e9f2;
@@ -24,22 +25,6 @@
   --green: #4f7f73; --green-line: #8fb5aa; --green-soft: #e4eeea;
   --sans: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", Arial, sans-serif;
   --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #121a25; --canvas: #17212e; --card: #1e2a39; --ink: #e6ebf2; --body: #c4cdd9; --muted: #94a3b8;
-    --line: #33435a; --dot: #2c3a4e; --accent: #73a9e8; --navy: #b9d2f0;
-    --slate: #a3bfe0; --slate-line: #4d6a8e; --slate-soft: #24364c;
-    --brown: #d9ae86; --brown-line: #7f6148; --brown-soft: #392e25;
-    --green: #8fc7b9; --green-line: #4f7f73; --green-soft: #1f3632; color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #121a25; --canvas: #17212e; --card: #1e2a39; --ink: #e6ebf2; --body: #c4cdd9; --muted: #94a3b8;
-  --line: #33435a; --dot: #2c3a4e; --accent: #73a9e8; --navy: #b9d2f0;
-  --slate: #a3bfe0; --slate-line: #4d6a8e; --slate-soft: #24364c;
-  --brown: #d9ae86; --brown-line: #7f6148; --brown-soft: #392e25;
-  --green: #8fc7b9; --green-line: #4f7f73; --green-soft: #1f3632; color-scheme: dark;
 }
 body {
   background: var(--bg); color: var(--ink); font-family: var(--sans);
