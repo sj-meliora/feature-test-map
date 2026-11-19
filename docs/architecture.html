@@ -91,6 +91,40 @@ svg text.ptxt.fmt { fill: var(--muted); }
 svg text.lbl { font-size: 12px; font-weight: 500; fill: var(--ink); }
 svg text.lbl.open { fill: var(--muted); }
 
+/* 뷰 공통 표기 */
+figure + figure { margin-top: 0; }
+.vtitle { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 12px 18px; border-bottom: 1px solid var(--line); background: var(--card); }
+.vtitle b { font-size: 15px; color: var(--navy); }
+.vtitle span { font-size: 12.5px; color: var(--muted); }
+.frame { fill: var(--card); stroke: var(--ink); stroke-width: 1.4; }
+.frame.prop { stroke: var(--prop); stroke-dasharray: 7 4; }
+.frame.repo { fill: var(--zone); stroke: var(--slate); }
+.inner { fill: var(--green-soft); stroke: var(--green-line); stroke-width: 1.3; }
+.inner.db { fill: var(--card); stroke: var(--slate-line); }
+.port { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+svg text.iname { font-size: 13px; font-weight: 700; }
+svg text.idesc { font-size: 11.5px; fill: var(--body); }
+.badge { fill: var(--prop-soft); stroke: var(--prop); stroke-width: 1.2; }
+svg text.btxt { font-size: 11px; font-weight: 700; fill: var(--prop); }
+.conn { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
+.conn.data { stroke-dasharray: 7 4; }
+.conn.talk { stroke: var(--brown); }
+.conn.open { stroke: var(--muted); stroke-dasharray: 2 4; }
+.conn.dep { stroke-dasharray: 7 4; }
+.conn.tie { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 3 3; }
+.tip-o { fill: none; stroke: var(--ink); stroke-width: 1.6; }
+.tip-h { fill: var(--brown); }
+svg text.lbl.talk { fill: var(--brown); }
+svg text.lbl.mono { font-family: var(--mono); font-size: 11.5px; }
+.pkg { fill: var(--zone); stroke: var(--slate); stroke-width: 1.3; }
+.pkg.prop { stroke: var(--prop); stroke-dasharray: 7 4; }
+svg text.pname { font-size: 13.5px; font-weight: 700; fill: var(--navy); }
+.note { fill: var(--prop-soft); stroke: var(--prop); stroke-width: 1.2; }
+svg text.nhead { font-family: var(--mono); font-size: 11px; font-weight: 600; fill: var(--prop); }
+svg text.ntxt { font-size: 12px; fill: var(--ink); }
+svg text.ntxt.b { font-weight: 700; }
+.lg { display: inline-block; width: 30px; height: 12px; }
+
 /* 아래 표 */
 .grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 20px; }
 section { min-width: 0; }
@@ -120,178 +154,226 @@ p.foot { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 100ch; }
   <header>
     <div>
       <h1>전체 구조도</h1>
-      <p>Feature-Test Map · 도면 0 · 제안 표기 포함</p>
+      <p>Feature-Test Map · 도면 0 · C&amp;C View와 Module View</p>
     </div>
   </header>
 
   <figure>
+    <div class="vtitle"><b>C&amp;C View</b><span>실행 시점의 컴포넌트와 커넥터 · shared-data 스타일과 call-return 스타일</span></div>
     <div class="scroll">
-<svg viewBox="0 0 1460 665" role="img" aria-label="전체 구조도. 추출 에이전트와 사용자가 IMS structure를 바탕으로 YAML 원본을 작성하고, 검증 명령과 조회 명령이 공통 읽기 모듈을 통해 원본을 읽는다. 조회 명령은 원본에서 만든 메모리 안의 SQLite에 질의 에이전트의 SQL을 실행한다.">
+<svg viewBox="0 0 1460 620" role="img" aria-label="C&amp;C View. 추출 에이전트와 사용자가 원본 저장소에 쓰고, 검증 명령과 조회 명령이 원본 저장소를 읽는다. 조회 명령은 프로세스 안에서 원본을 메모리 안의 SQLite로 적재하고 질의 에이전트가 보낸 SQL을 실행한다.">
 <defs>
-  <marker id="tip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="tip" d="M0,1 L10,5 L0,9 Z"/></marker>
-  <marker id="tip-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="tip open" d="M0,1 L10,5 L0,9 Z"/></marker>
+  <marker id="ctip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="tip" d="M0,1 L10,5 L0,9 Z"/></marker>
+  <marker id="ctipo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path class="tip-o" d="M1,1 L9,5 L1,9"/></marker>
+  <marker id="ctiph" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="tip-h" d="M0,1 L10,5 L0,9 Z"/></marker>
+  <marker id="ctipg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="tip open" d="M0,1 L10,5 L0,9 Z"/></marker>
 </defs>
-
-<!-- 구획 -->
-<rect class="zone" x="30" y="70" width="210" height="570" rx="10"/>
-<text class="zname" x="46" y="98">원천</text>
-<rect class="zone" x="270" y="70" width="310" height="570" rx="10"/>
-<text class="zname" x="286" y="98">작성 시점</text>
-<text class="zsub" x="354" y="98">원본을 만들고 고칠 때</text>
-<rect class="zone" x="650" y="70" width="240" height="570" rx="10"/>
-<text class="zname" x="666" y="98">원본</text>
-<text class="zsub" x="702" y="98">텍스트 파일, git에서 관리</text>
-<rect class="zone" x="940" y="70" width="495" height="570" rx="10"/>
-<text class="zname" x="956" y="98">질의 시점</text>
-<text class="zsub" x="1024" y="98">질의가 들어올 때마다</text>
-
-<!-- 원천 -->
-<rect class="box plain" x="45" y="134" width="180" height="76" rx="6"/>
-<text class="st" x="59" y="154">«외부 시스템»</text>
-<text class="name" x="59" y="175">IMS structure</text>
-<text class="desc" x="59" y="196">기능 항목의 목록</text>
-
-<rect class="box plain" x="45" y="357" width="180" height="76" rx="6"/>
-<text class="st" x="59" y="377">«저장소»</text>
-<text class="name" x="59" y="398">TC 저장소</text>
-<text class="desc" x="59" y="419">suite 폴더와 소스 코드</text>
-
-<!-- 작성 시점 -->
-<rect class="box llm" x="300" y="125" width="250" height="94" rx="6"/>
-<text class="st llm" x="314" y="145">«LLM»</text>
-<text class="name" x="314" y="166">추출 에이전트</text>
-<text class="desc" x="314" y="187">IMS를 탐색하여 기능 초안을 쓰고</text>
-<text class="desc" x="314" y="205">시나리오의 내용을 채운다</text>
-
-<rect class="box human" x="300" y="247" width="250" height="76" rx="6"/>
-<text class="st human" x="314" y="267">«사람»</text>
-<text class="name" x="314" y="288">사용자</text>
-<text class="desc" x="314" y="309">기능 ID를 부여하고 내용을 검토한다</text>
-
-<rect class="box open" x="300" y="357" width="250" height="76" rx="6"/>
-<text class="st" x="314" y="377">«주체 미정»</text>
-<text class="name dim" x="314" y="398">TC 추출 · 관계 식별</text>
-<text class="desc" x="314" y="419">FR-2, FR-3을 시작할 때 정한다</text>
-<rect class="pill open" x="498" y="367" width="42" height="18" rx="9"/><text class="ptxt open" x="519" y="380" text-anchor="middle">미결</text>
-
-<rect class="box script prop" x="300" y="494" width="250" height="94" rx="6"/>
-<text class="st script" x="314" y="514">«스크립트»</text>
-<text class="name" x="314" y="535">검증 명령</text>
-<text class="desc" x="314" y="556">원본을 고친 직후에 실행한다</text>
-<text class="desc" x="314" y="574">ID 중복, 부모 ID, 필수 항목 확인</text>
-<rect class="pill prop" x="490" y="504" width="50" height="18" rx="9"/><text class="ptxt prop" x="515" y="517" text-anchor="middle">제안 3</text>
-
-<!-- 원본 -->
-<rect class="box plain" x="670" y="132" width="200" height="56" rx="6"/>
-<text class="name" x="684" y="156">기능</text>
-<text class="desc" x="684" y="175">100개 미만</text>
-<rect class="pill fmt" x="816" y="141" width="44" height="18" rx="9"/><text class="ptxt fmt" x="838" y="154" text-anchor="middle">YAML</text>
-
-<rect class="box plain" x="670" y="206" width="200" height="56" rx="6"/>
-<text class="name" x="684" y="230">인스턴스 시나리오</text>
-<text class="desc" x="684" y="249">기능마다 1개에서 시작</text>
-<rect class="pill fmt" x="816" y="215" width="44" height="18" rx="9"/><text class="ptxt fmt" x="838" y="228" text-anchor="middle">YAML</text>
-
-<rect class="box plain" x="670" y="367" width="200" height="56" rx="6"/>
-<text class="name" x="684" y="391">TC</text>
-<text class="desc" x="684" y="410">최대 5천 개</text>
-<rect class="pill fmt" x="810" y="376" width="50" height="18" rx="9"/><text class="ptxt fmt" x="835" y="389" text-anchor="middle">JSONL</text>
-
-<rect class="box plain" x="670" y="443" width="200" height="56" rx="6"/>
-<text class="name" x="684" y="467">시나리오-TC 관계</text>
-<text class="desc" x="684" y="486">TC 수 이상</text>
-<rect class="pill fmt" x="810" y="452" width="50" height="18" rx="9"/><text class="ptxt fmt" x="835" y="465" text-anchor="middle">JSONL</text>
-
-<!-- 질의 시점 -->
-<rect class="box llm" x="960" y="125" width="190" height="94" rx="6"/>
-<text class="st llm" x="974" y="145">«LLM»</text>
-<text class="name" x="974" y="166">질의 에이전트</text>
-<text class="desc" x="974" y="187">질의의 의미를 기능 ID로</text>
-<text class="desc" x="974" y="205">바꾸고 SQL을 작성한다</text>
-
-<rect class="box script prop" x="1225" y="125" width="190" height="94" rx="6"/>
-<text class="st script" x="1239" y="145">«스크립트 · 스킬»</text>
-<text class="name" x="1239" y="166">조회 명령</text>
-<text class="desc" x="1239" y="187">읽기 전용. SQL을 실행하고</text>
-<text class="desc" x="1239" y="205">기능 목록을 경로와 함께 낸다</text>
-<rect class="pill prop" x="1355" y="135" width="50" height="18" rx="9"/><text class="ptxt prop" x="1380" y="148" text-anchor="middle">제안 2</text>
-
-<rect class="box plain" x="960" y="290" width="190" height="76" rx="6"/>
-<text class="st" x="974" y="310">«문서 · 스킬»</text>
-<text class="name" x="974" y="331">안내 문서</text>
-<text class="desc" x="974" y="352">스키마 설명과 조회 절차</text>
-
-<rect class="box plain prop" x="1225" y="280" width="190" height="94" rx="6"/>
-<text class="st" x="1239" y="300">«메모리»</text>
-<text class="name" x="1239" y="321">SQLite</text>
-<text class="desc" x="1239" y="342">테이블 4개와 집계 뷰.</text>
-<text class="desc" x="1239" y="360">파일로 남기지 않는다</text>
-<rect class="pill prop" x="1355" y="290" width="50" height="18" rx="9"/><text class="ptxt prop" x="1380" y="303" text-anchor="middle">제안 4</text>
-
-<rect class="box script prop" x="960" y="455" width="235" height="112" rx="6"/>
-<text class="st script" x="974" y="475">«스크립트»</text>
-<text class="name" x="974" y="496">공통 읽기 모듈</text>
-<text class="desc" x="974" y="517">원본을 읽어 테이블을 만든다</text>
-<text class="desc" x="974" y="535">계층 경로를 계산하고 뷰를 정의한다</text>
-<text class="desc" x="974" y="553">형식 오류를 보고한다</text>
-<rect class="pill prop" x="1135" y="465" width="50" height="18" rx="9"/><text class="ptxt prop" x="1160" y="478" text-anchor="middle">제안 1</text>
-
-<rect class="box open" x="1225" y="545" width="190" height="76" rx="6"/>
-<text class="st" x="1239" y="565">«형태 미정»</text>
-<text class="name dim" x="1239" y="586">시각화</text>
-<text class="desc" x="1239" y="607">FR-4에서 정한다</text>
-<rect class="pill open" x="1363" y="555" width="42" height="18" rx="9"/><text class="ptxt open" x="1384" y="568" text-anchor="middle">미결</text>
-
-<!-- 흐름: 작성 -->
-<path class="flow" d="M225,172 H300" marker-end="url(#tip)"/>
-<text class="lbl" x="262" y="164" text-anchor="middle">탐색</text>
-<path class="flow" d="M550,160 H670" marker-end="url(#tip)"/>
-<path class="flow" d="M630,160 V234 H670" marker-end="url(#tip)"/>
-<text class="lbl" x="590" y="152" text-anchor="middle">직접 편집</text>
-<path class="flow" d="M550,285 H630 V234"/>
-<text class="lbl" x="556" y="304">ID 부여 · 검토</text>
-
-<path class="flow open" d="M225,395 H300" marker-end="url(#tip-open)"/>
-<text class="lbl open" x="262" y="387" text-anchor="middle">추출</text>
-<path class="flow open" d="M550,395 H670" marker-end="url(#tip-open)"/>
-<path class="flow open" d="M630,395 V471 H670" marker-end="url(#tip-open)"/>
-<text class="lbl open" x="590" y="387" text-anchor="middle">기록</text>
-
-<path class="flow" d="M550,545 H960" marker-end="url(#tip)"/>
-<text class="lbl" x="755" y="537" text-anchor="middle">호출 · 오류를 돌려받음</text>
-
-<!-- 흐름: 원본을 읽음 -->
-<path class="flow" d="M870,160 H915 M870,234 H915 M870,395 H915 M870,471 H915 M915,160 V490"/>
-<path class="flow" d="M915,490 H960" marker-end="url(#tip)"/>
-<text class="lbl" x="936" y="482" text-anchor="middle">읽음</text>
-
-<!-- 흐름: 질의 -->
-<path class="flow" d="M1150,158 H1225" marker-end="url(#tip)"/>
-<text class="lbl" x="1187" y="150" text-anchor="middle">SQL</text>
-<path class="flow" d="M1225,192 H1150" marker-end="url(#tip)"/>
-<text class="lbl" x="1187" y="184" text-anchor="middle">결과</text>
-<path class="flow" d="M1055,219 V290" marker-end="url(#tip)"/>
-<text class="lbl" x="1063" y="259">읽음</text>
-<path class="flow" d="M1320,219 V280" marker-end="url(#tip)"/>
-<text class="lbl" x="1328" y="255">SQL 실행</text>
-<path class="flow" d="M1250,219 V248 H1178 V455" marker-end="url(#tip)"/>
-<text class="lbl" x="1186" y="415">호출</text>
-<path class="flow" d="M1195,490 H1270 V374" marker-end="url(#tip)"/>
-<text class="lbl" x="1278" y="440">생성</text>
-<path class="flow open" d="M1370,374 V545" marker-end="url(#tip-open)"/>
+<rect class="box human" x="640" y="40" width="180" height="56" rx="4"/>
+<text class="st human" x="652" y="59">«actor»</text>
+<text class="name" x="652" y="80">사용자</text>
+<rect class="box llm" x="250" y="140" width="260" height="84" rx="4"/>
+<text class="st llm" x="262" y="159">«component · LLM agent»</text>
+<text class="name" x="262" y="180">추출 에이전트</text>
+<text class="desc" x="262" y="200">IMS를 탐색하여 원본의 초안을 작성</text>
+<rect class="box llm" x="950" y="140" width="260" height="84" rx="4"/>
+<text class="st llm" x="962" y="159">«component · LLM agent»</text>
+<text class="name" x="962" y="180">질의 에이전트</text>
+<text class="desc" x="962" y="200">질의를 기능 ID와 SQL로 변환</text>
+<rect class="box plain" x="1270" y="146" width="160" height="72" rx="4"/>
+<text class="st " x="1282" y="165">«file · 스킬»</text>
+<text class="name" x="1282" y="186">안내 문서</text>
+<text class="desc" x="1282" y="206">스키마, 조회 절차</text>
+<rect class="box plain" x="40" y="146" width="150" height="72" rx="4"/>
+<text class="st " x="52" y="165">«external system»</text>
+<text class="name" x="52" y="186">IMS structure</text>
+<text class="desc" x="52" y="206">기능 항목의 목록</text>
+<rect class="frame prop" x="250" y="320" width="260" height="160" rx="4"/>
+<text class="st script" x="262" y="339">«component · CLI process»</text><text class="name" x="262" y="360">검증 명령</text>
+<circle class="badge" cx="492" cy="338" r="9"/><text class="btxt" x="492" y="342" text-anchor="middle">3</text>
+<rect class="inner " x="264" y="384" width="104" height="76" rx="3"/>
+<text class="iname" x="274" y="408">원본 읽기</text>
+<text class="idesc" x="274" y="428">파일 → 테이블</text>
+<rect class="inner " x="392" y="384" width="104" height="76" rx="3"/>
+<text class="iname" x="402" y="408">규칙 검사</text>
+<text class="idesc" x="402" y="428">중복, 참조,</text>
+<text class="idesc" x="402" y="444">필수 항목</text>
+<path class="conn " d="M368,422 H392" marker-end="url(#ctip)"/>
+<rect class="frame repo" x="600" y="320" width="260" height="270" rx="4"/>
+<text class="st llm" x="612" y="339">«repository · shared data»</text><text class="name" x="612" y="360">원본 저장소</text>
+<rect class="box plain" x="620" y="376" width="220" height="40" rx="3"/><text class="iname" x="632" y="401">기능</text>
+<rect class="pill fmt" x="786" y="387" width="44" height="18" rx="9"/><text class="ptxt fmt" x="808.0" y="400" text-anchor="middle">YAML</text>
+<rect class="box plain" x="620" y="424" width="220" height="40" rx="3"/><text class="iname" x="632" y="449">인스턴스 시나리오</text>
+<rect class="pill fmt" x="786" y="435" width="44" height="18" rx="9"/><text class="ptxt fmt" x="808.0" y="448" text-anchor="middle">YAML</text>
+<rect class="box plain" x="620" y="480" width="220" height="40" rx="3"/><text class="iname" x="632" y="505">TC</text>
+<rect class="pill fmt" x="780" y="491" width="50" height="18" rx="9"/><text class="ptxt fmt" x="805.0" y="504" text-anchor="middle">JSONL</text>
+<rect class="box plain" x="620" y="528" width="220" height="40" rx="3"/><text class="iname" x="632" y="553">시나리오-TC 관계</text>
+<rect class="pill fmt" x="780" y="539" width="50" height="18" rx="9"/><text class="ptxt fmt" x="805.0" y="552" text-anchor="middle">JSONL</text>
+<rect class="frame prop" x="950" y="320" width="470" height="170" rx="4"/>
+<text class="st script" x="962" y="339">«component · CLI process · 스킬 · 읽기 전용»</text><text class="name" x="962" y="360">조회 명령</text>
+<circle class="badge" cx="1402" cy="338" r="9"/><text class="btxt" x="1402" y="342" text-anchor="middle">2</text>
+<rect class="inner " x="970" y="388" width="120" height="84" rx="3"/>
+<text class="iname" x="980" y="412">원본 읽기</text>
+<text class="idesc" x="980" y="432">경로 계산,</text>
+<text class="idesc" x="980" y="448">뷰 정의</text>
+<circle class="badge" cx="1078" cy="400" r="9"/><text class="btxt" x="1078" y="404" text-anchor="middle">1</text>
+<rect class="inner db" x="1130" y="388" width="130" height="84" rx="3"/>
+<text class="iname" x="1140" y="412">SQLite</text>
+<text class="idesc" x="1140" y="432">«in-memory DB»</text>
+<text class="idesc" x="1140" y="448">테이블 4개, 집계 뷰</text>
+<circle class="badge" cx="1248" cy="400" r="9"/><text class="btxt" x="1248" y="404" text-anchor="middle">4</text>
+<rect class="inner " x="1300" y="388" width="104" height="84" rx="3"/>
+<text class="iname" x="1310" y="412">SQL 실행</text>
+<text class="idesc" x="1310" y="432">결과 행 출력</text>
+<path class="conn " d="M1090,430 H1130" marker-end="url(#ctip)"/>
+<text class="idesc" x="1110" y="424" text-anchor="middle">적재</text>
+<path class="conn " d="M1300,430 H1260" marker-end="url(#ctip)"/>
+<text class="idesc" x="1280" y="424" text-anchor="middle">질의</text>
+<rect class="box plain" x="40" y="524" width="150" height="64" rx="4"/>
+<text class="st " x="52" y="543">«file store»</text>
+<text class="name" x="52" y="564">TC 저장소</text>
+<rect class="box open" x="250" y="524" width="260" height="64" rx="4"/>
+<text class="st " x="262" y="543">«component · 주체 미정»</text>
+<text class="name dim" x="262" y="564">TC 추출 · 관계 식별</text>
+<rect class="pill open" x="458" y="534" width="42" height="18" rx="9"/><text class="ptxt open" x="479.0" y="547" text-anchor="middle">미결</text>
+<rect class="box open" x="1050" y="540" width="220" height="64" rx="4"/>
+<text class="st " x="1062" y="559">«component · 형태 미정»</text>
+<text class="name dim" x="1062" y="580">시각화</text>
+<rect class="pill open" x="1218" y="550" width="42" height="18" rx="9"/><text class="ptxt open" x="1239.0" y="563" text-anchor="middle">미결</text>
+<path class="conn talk" d="M640,68 H380 V140" marker-end="url(#ctiph)" marker-start="url(#ctiph)"/>
+<text class="lbl talk" x="510" y="60" text-anchor="middle">작업 지시 · 검토</text>
+<path class="conn talk" d="M820,68 H1080 V140" marker-end="url(#ctiph)" marker-start="url(#ctiph)"/>
+<text class="lbl talk" x="950" y="60" text-anchor="middle">질의 · 응답</text>
+<path class="conn data" d="M730,96 V320" marker-end="url(#ctipo)"/>
+<text class="lbl " x="738" y="190">쓰기 (ID 부여, 수정)</text>
+<path class="conn data" d="M450,224 V280 H680 V320" marker-end="url(#ctipo)"/>
+<text class="lbl " x="565" y="272" text-anchor="middle">쓰기 (기능, 시나리오)</text>
+<path class="conn data" d="M190,182 H250" marker-end="url(#ctipo)"/>
+<text class="lbl " x="220" y="174" text-anchor="middle">읽기</text>
+<path class="conn " d="M320,224 V320" marker-end="url(#ctip)"/>
+<text class="lbl " x="328" y="268">실행</text>
+<text class="lbl " x="328" y="286">↩ 오류 목록</text>
+<path class="conn data" d="M600,422 H510" marker-end="url(#ctipo)"/>
+<text class="lbl " x="555" y="414" text-anchor="middle">읽기</text>
+<path class="conn data" d="M860,430 H950" marker-end="url(#ctipo)"/>
+<text class="lbl " x="905" y="422" text-anchor="middle">읽기</text>
+<path class="conn " d="M1080,224 V320" marker-end="url(#ctip)"/>
+<text class="lbl " x="1088" y="268">SQL</text>
+<text class="lbl " x="1088" y="286">↩ 결과 행</text>
+<path class="conn data" d="M1270,182 H1210" marker-end="url(#ctipo)"/>
+<text class="lbl " x="1240" y="174" text-anchor="middle">읽기</text>
+<path class="conn open" d="M190,556 H250" marker-end="url(#ctipg)"/>
+<path class="conn open" d="M510,556 H600" marker-end="url(#ctipg)"/>
+<text class="lbl open" x="555" y="548" text-anchor="middle">쓰기</text>
+<path class="conn open" d="M860,572 H1050" marker-end="url(#ctipg)"/>
+<text class="lbl open" x="955" y="564" text-anchor="middle">입력 미정</text>
+<rect class="port" x="316" y="316" width="8" height="8"/>
+<rect class="port" x="506" y="418" width="8" height="8"/>
+<rect class="port" x="1076" y="316" width="8" height="8"/>
+<rect class="port" x="946" y="426" width="8" height="8"/>
 </svg>
     </div>
     <figcaption>
-      <p>원본을 쓰는 경로와 읽는 경로가 분리되어 있다. 쓰는 쪽은 추출 에이전트와 사용자가 YAML을 직접 고치고, 읽는 쪽은 조회 명령이 질의마다 원본에서 SQLite를 새로 만들어 SQL을 실행한다. 두 경로는 공통 읽기 모듈 하나를 함께 사용하므로, 검증 명령이 통과시킨 원본은 조회 명령도 같은 방식으로 읽는다.</p>
+      <p>모든 컴포넌트는 원본 저장소를 통해서만 데이터를 주고받는다. 쓰는 쪽은 추출 에이전트와 사용자이고, 읽는 쪽은 검증 명령과 조회 명령이다. 메모리 안의 SQLite는 조회 명령 프로세스의 내부에만 존재하며, 프로세스가 끝나면 사라진다.</p>
       <div class="marks">
-        <span><span class="chip llm"></span>LLM이 하는 일</span>
-        <span><span class="chip human"></span>사람이 하는 일</span>
-        <span><span class="chip script"></span>스크립트가 하는 일 (결정적 처리)</span>
-        <span><span class="chip"></span>파일, 문서, 데이터</span>
+        <span><span class="chip llm"></span>컴포넌트 (LLM 에이전트)</span>
+        <span><span class="chip script"></span>컴포넌트 (스크립트, 결정적 처리)</span>
+        <span><span class="chip human"></span>액터</span>
+        <span><span class="chip"></span>파일, 외부 시스템</span>
+        <span><svg class="lg" viewBox="0 0 30 12"><rect class="port" x="11" y="2" width="8" height="8"/></svg>포트</span>
+        <span><svg class="lg" viewBox="0 0 30 12"><path class="conn" d="M1,6 H28" marker-end="url(#ctip)"/></svg>호출과 응답 (call-return)</span>
+        <span><svg class="lg" viewBox="0 0 30 12"><path class="conn data" d="M1,6 H28" marker-end="url(#ctipo)"/></svg>데이터 접근. 화살표는 데이터가 흐르는 방향</span>
+        <span><svg class="lg" viewBox="0 0 30 12"><path class="conn talk" d="M3,6 H27" marker-end="url(#ctiph)" marker-start="url(#ctiph)"/></svg>사람과 에이전트의 대화</span>
         <span><span class="chip prop"></span>제안 (미채택). 번호는 아래 표와 대응</span>
         <span><span class="chip open"></span>미결</span>
-        <span><span class="sw"></span>데이터나 호출의 방향</span>
-        <span><span class="sw open"></span>정해지지 않은 흐름</span>
+      </div>
+    </figcaption>
+  </figure>
+
+  <figure>
+    <div class="vtitle"><b>Module View</b><span>코드 단위의 분할과 사용 관계 · decomposition 스타일과 uses 스타일</span></div>
+    <div class="scroll">
+<svg viewBox="0 0 1460 500" role="img" aria-label="Module View. 스킬 패키지의 조회 명령과 작성 도구 패키지의 검증 명령이 공통 읽기 모듈을 사용한다. 공통 읽기 모듈은 원본 파서, 스키마 정의, 계층 경로 계산, 뷰 정의, 메모리 DB 적재로 나뉜다.">
+<defs>
+  <marker id="mtip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="tip" d="M0,1 L10,5 L0,9 Z"/></marker>
+  <marker id="mtipo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path class="tip-o" d="M1,1 L9,5 L1,9"/></marker>
+  <marker id="mtiph" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="tip-h" d="M0,1 L10,5 L0,9 Z"/></marker>
+  <marker id="mtipg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="tip open" d="M0,1 L10,5 L0,9 Z"/></marker>
+</defs>
+<rect class="pkg " x="60" y="48" width="170" height="24"/><rect class="pkg " x="60" y="72" width="460" height="170"/><text class="st llm" x="70" y="64">«package»</text><text class="pname" x="142" y="65">스킬</text><text class="zsub" x="74" y="94">플러그인으로 설치한다 · DP-6</text>
+<rect class="box plain" x="90" y="125" width="180" height="84" rx="4"/>
+<text class="st " x="102" y="144">«document»</text>
+<text class="name" x="102" y="165">안내 문서</text>
+<text class="desc" x="102" y="185">스키마 설명, 조회 절차</text>
+<rect class="box plain prop" x="310" y="125" width="180" height="84" rx="4"/>
+<text class="st " x="322" y="144">«module»</text>
+<text class="name" x="322" y="165">조회 명령</text>
+<text class="desc" x="322" y="185">SQL 실행, 목록 출력</text>
+<circle class="badge" cx="472" cy="143" r="9"/><text class="btxt" x="472" y="147" text-anchor="middle">2</text>
+<rect class="pkg " x="940" y="48" width="200" height="24"/><rect class="pkg " x="940" y="72" width="460" height="170"/><text class="st llm" x="950" y="64">«package»</text><text class="pname" x="1022" y="65">작성 도구</text><text class="zsub" x="954" y="94">저장소 안에서 실행한다</text>
+<rect class="box plain prop" x="970" y="125" width="180" height="84" rx="4"/>
+<text class="st " x="982" y="144">«module»</text>
+<text class="name" x="982" y="165">검증 명령</text>
+<text class="desc" x="982" y="185">오류 보고, 종료 코드</text>
+<circle class="badge" cx="1132" cy="143" r="9"/><text class="btxt" x="1132" y="147" text-anchor="middle">3</text>
+<rect class="box open" x="1190" y="125" width="180" height="84" rx="4"/>
+<text class="st " x="1202" y="144">«module · 미정»</text>
+<text class="name dim" x="1202" y="165">TC 추출 · 관계 기록</text>
+<text class="desc" x="1202" y="185">FR-2, FR-3에서 정함</text>
+<path class="note" d="M560,72 H884 L900,88 V222 H560 Z"/><path class="note" d="M884,72 V88 H900" fill="none"/>
+<text class="nhead" x="574" y="94">«variation point»</text>
+<text class="ntxt b" x="574" y="116">공통 읽기 모듈을 두는 위치</text>
+<text class="ntxt b" x="574" y="142">변형 A · 스킬 패키지 안</text>
+<text class="ntxt" x="574" y="160">플러그인만 설치해도 조회가 동작한다.</text>
+<text class="ntxt b" x="574" y="186">변형 B · 별도 패키지</text>
+<text class="ntxt" x="574" y="204">플러그인에 함께 넣어 배포해야 한다.</text>
+<path class="conn tie" d="M730,222 V320"/>
+<rect class="pkg prop" x="300" y="296" width="230" height="24"/><rect class="pkg prop" x="300" y="320" width="860" height="150"/><text class="st llm" x="310" y="312">«package»</text><text class="pname" x="382" y="313">공통 읽기 모듈</text><text class="zsub" x="314" y="342">두 명령이 함께 사용한다 · 제안</text>
+<rect class="box plain" x="323" y="360" width="150" height="84" rx="4"/>
+<text class="st " x="335" y="379">«module»</text>
+<text class="name" x="335" y="400">원본 파서</text>
+<text class="desc" x="335" y="420">YAML, JSONL 읽기</text>
+<rect class="box plain" x="489" y="360" width="150" height="84" rx="4"/>
+<text class="st " x="501" y="379">«module»</text>
+<text class="name" x="501" y="400">스키마 정의</text>
+<text class="desc" x="501" y="420">테이블 4개, 제약</text>
+<rect class="box plain prop" x="655" y="360" width="150" height="84" rx="4"/>
+<text class="st " x="667" y="379">«module»</text>
+<text class="name" x="667" y="400">계층 경로 계산</text>
+<text class="desc" x="667" y="420">부모 ID에서 유도</text>
+<circle class="badge" cx="787" cy="378" r="9"/><text class="btxt" x="787" y="382" text-anchor="middle">1</text>
+<rect class="box plain" x="821" y="360" width="150" height="84" rx="4"/>
+<text class="st " x="833" y="379">«module»</text>
+<text class="name" x="833" y="400">뷰 정의</text>
+<text class="desc" x="833" y="420">기능별 TC 개수 등</text>
+<rect class="box plain prop" x="987" y="360" width="150" height="84" rx="4"/>
+<text class="st " x="999" y="379">«module»</text>
+<text class="name" x="999" y="400">메모리 DB 적재</text>
+<text class="desc" x="999" y="420">SQLite 연결을 반환</text>
+<circle class="badge" cx="1119" cy="378" r="9"/><text class="btxt" x="1119" y="382" text-anchor="middle">4</text>
+<rect class="box plain" x="1220" y="355" width="190" height="84" rx="4"/>
+<text class="st " x="1232" y="374">«library»</text>
+<text class="name" x="1232" y="395">외부 라이브러리</text>
+<text class="desc" x="1232" y="415">YAML 파서, SQLite 바인딩</text>
+<path class="conn dep" d="M400,209 V272 H570 V320" marker-end="url(#mtipo)"/>
+<text class="lbl mono" x="485" y="264" text-anchor="middle">«uses»</text>
+<path class="conn dep" d="M1060,209 V320" marker-end="url(#mtipo)"/>
+<text class="lbl mono" x="1068" y="285">«uses»</text>
+<path class="conn dep" d="M1160,397 H1220" marker-end="url(#mtipo)"/>
+<text class="lbl mono" x="1190" y="389" text-anchor="middle">«uses»</text>
+<path class="conn dep" d="M180,209 V402 H300" marker-end="url(#mtipo)"/>
+<text class="lbl mono" x="72" y="300">«describes»</text>
+<text class="lbl " x="72" y="318">스키마, 뷰</text>
+</svg>
+    </div>
+    <figcaption>
+      <p>조회 명령과 검증 명령은 공통 읽기 모듈 하나를 사용한다. 이 모듈은 C&amp;C View에서 두 프로세스의 내부에 각각 '원본 읽기'로 나타난다. 안내 문서는 스키마 정의와 뷰 정의를 글로 설명하므로, 두 모듈을 고치면 안내 문서도 함께 고쳐야 한다.</p>
+      <div class="marks">
+        <span><svg class="lg" viewBox="0 0 30 12"><rect class="pkg" x="2" y="1" width="26" height="10"/></svg>패키지</span>
+        <span><span class="chip"></span>모듈, 문서, 라이브러리</span>
+        <span><svg class="lg" viewBox="0 0 30 12"><path class="conn dep" d="M1,6 H28" marker-end="url(#mtipo)"/></svg>의존. 화살표가 가리키는 쪽을 사용하거나 설명한다</span>
+        <span><svg class="lg" viewBox="0 0 30 12"><rect class="note" x="2" y="1" width="26" height="10"/></svg>설계안이 갈리는 지점</span>
+        <span><span class="chip prop"></span>제안 (미채택)</span>
+        <span><span class="chip open"></span>미결</span>
       </div>
     </figcaption>
   </figure>
@@ -316,13 +398,13 @@ p.foot { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 100ch; }
         <li><b>ID 부여 시점</b><span>추출 에이전트가 ID 칸을 비워 두는지, 제안값을 넣고 사용자가 확정하는지 정하지 않았다.</span></li>
         <li><b>IMS 원본 위치</b><span>IMS에서 항목 하나를 가리키는 값의 형태를 정하지 않았다. 다시 추출할 때 기존 레코드와 대조하는 기준이 된다.</span></li>
         <li><b>TC와 관계</b><span>TC를 추출하는 방법(FR-2)과 관계를 식별하는 주체와 판정 기준(FR-3)을 정하지 않았다.</span></li>
-        <li><b>공통 모듈의 위치</b><span>조회 명령은 스킬에 속하고 검증 명령은 작성 작업에 속한다. 두 명령이 함께 쓰는 읽기 모듈을 어디에 둘지 정하지 않았다.</span></li>
+        <li><b>공통 모듈의 위치</b><span>Module View의 variation point다. 스킬 패키지 안에 두는 변형과 별도 패키지로 두는 변형 중에서 정하지 않았다.</span></li>
         <li><b>시각화</b><span>대상과 형태(FR-4)를 정하지 않았다. 데이터베이스 파일이 필요한지는 그때 판단한다.</span></li>
       </ul>
     </section>
   </div>
 
-  <p class="foot">실선 테두리는 DESIGN.md에서 결정된 내용이다. 주황색 점선 테두리는 논의 중인 제안이며 확정된 내용이 아니다. 구성 요소의 이름은 설명을 위한 것이며, 파일 이름과 명령 이름은 정하지 않았다. 기준: DESIGN.md의 DP-1부터 DP-7까지.</p>
+  <p class="foot">실선 테두리는 DESIGN.md에서 결정된 내용이다. 주황색 점선 테두리와 번호는 논의 중인 제안이며 확정된 내용이 아니다. 두 뷰는 같은 구조를 실행 시점과 코드 단위의 두 관점에서 나타낸다. 구성 요소의 이름은 설명을 위한 것이며, 파일 이름과 명령 이름은 정하지 않았다. 기준: DESIGN.md의 DP-1부터 DP-7까지.</p>
 </div>
 </body>
 </html>
