@@ -96,6 +96,7 @@ svg text.ktxt.pk { fill: var(--card); }
 svg text.ktxt.fk { fill: var(--slate); }
 svg text.col { font-size: 13px; fill: var(--ink); }
 svg text.col.pk { font-weight: 700; }
+svg tspan.en { font-family: var(--mono); font-size: 11px; font-weight: 400; fill: var(--muted); }
 svg text.typ { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
 svg text.flg { font-family: var(--mono); font-size: 10px; fill: var(--muted); }
 svg text.meta { font-size: 12px; fill: var(--muted); }
@@ -151,24 +152,24 @@ p.foot { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 90ch; }
 <text class="tname yaml" x="84" y="89">기능</text>
 <rect class="tagbox yaml" x="286" y="75" width="42" height="18" rx="9"/><text class="tag yaml" x="307.0" y="88" text-anchor="middle">YAML</text>
 <rect class="kbox pk" x="80" y="111" width="28" height="18" rx="3"/><text class="ktxt pk" x="94" y="124" text-anchor="middle">PK</text>
-<text class="col pk" x="120" y="124.5">ID</text>
+<text class="col pk" x="120" y="124.5">ID <tspan class="en">id</tspan></text>
 <text class="typ" x="328" y="124" text-anchor="end">TEXT</text>
 <line class="sep" x1="71" y1="136" x2="339" y2="136"/>
-<text class="col" x="120" y="156.5">이름</text>
+<text class="col" x="120" y="156.5">이름 <tspan class="en">name</tspan></text>
 <text class="typ" x="328" y="156" text-anchor="end">TEXT</text>
 <line class="sep" x1="71" y1="168" x2="339" y2="168"/>
-<text class="col" x="120" y="188.5">계층 경로</text>
+<text class="col" x="120" y="188.5">계층 경로 <tspan class="en">path</tspan></text>
 <text class="typ" x="328" y="188" text-anchor="end">TEXT</text>
 <line class="sep" x1="71" y1="200" x2="339" y2="200"/>
 <rect class="kbox fk" x="80" y="207" width="28" height="18" rx="3"/><text class="ktxt fk" x="94" y="220" text-anchor="middle">FK</text>
-<text class="col" x="120" y="220.5">부모 ID</text>
+<text class="col" x="120" y="220.5">부모 ID <tspan class="en">parent_id</tspan></text>
 <text class="typ" x="328" y="220" text-anchor="end">TEXT</text>
 <text class="flg" x="291" y="220" text-anchor="end">NULL</text>
 <line class="sep" x1="71" y1="232" x2="339" y2="232"/>
-<text class="col" x="120" y="252.5">자연어 설명</text>
+<text class="col" x="120" y="252.5">자연어 설명 <tspan class="en">description</tspan></text>
 <text class="typ" x="328" y="252" text-anchor="end">TEXT</text>
 <line class="sep" x1="71" y1="264" x2="339" y2="264"/>
-<text class="col" x="120" y="284.5">IMS 원본 위치</text>
+<text class="col" x="120" y="284.5">IMS 원본 위치 <tspan class="en">ims_ref</tspan></text>
 <text class="typ" x="328" y="284" text-anchor="end">TEXT</text>
 <rect class="card edge yaml" x="70" y="64" width="270" height="232" rx="6"/>
 <text class="meta" x="432" y="52">기능마다 1개에서 시작</text>
@@ -301,7 +302,7 @@ p.foot { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 90ch; }
     </section>
   </div>
 
-  <p class="foot">항목 이름은 DESIGN.md의 표기를 따른다. 자료형은 SQLite를 기준으로 한 제안이며 확정된 내용이 아니다. 뷰의 이름과 항목도 제안이다. 기준: DESIGN.md의 DP-1부터 DP-5까지와 DP-7.</p>
+  <p class="foot">항목 이름은 DESIGN.md의 표기를 따른다. 기능 테이블의 영문 이름과 자료형은 DP-1에서 결정한 내용이며, 테이블 이름은 feature다. 그 밖의 테이블의 자료형은 SQLite를 기준으로 한 제안이며 확정된 내용이 아니다. 그림에 있는 뷰의 이름과 항목도 제안이다. DP-1에서 결정한 뷰(v_leaf_feature, v_feature_subtree)와 생성 정보를 담는 build_info 테이블은 이 그림에 나타내지 않았으며, design/dp1.md와 design/dp4.md에 있다. 기준: DESIGN.md의 DP-1부터 DP-5까지와 DP-7.</p>
 </div>
 </body>
 </html>
