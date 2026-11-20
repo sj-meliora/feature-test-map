@@ -118,7 +118,7 @@ tests/                    저장소 최상위. 스킬과 함께 설치되지 않
 2. `PRAGMA query_only = ON`을 설정한다.
 3. SQLite의 권한 확인 콜백(authorizer)에서 읽기, 선택, 함수 호출, 재귀 질의만 허용한다. `ATTACH`, `PRAGMA`, 쓰기 문은 실행 전에 거부된다.
 
-시험용 스크립트에서 `DELETE`, `ATTACH`, `PRAGMA writable_schema = 1`이 모두 `not authorized`로 거부됨을 확인하였다.
+`DELETE`, `ATTACH`, `PRAGMA writable_schema = 1`을 비롯한 쓰기 문이 실행 전에 거부되고 데이터 폴더의 파일이 바뀌지 않음을 `tests/test_ftm_query.py`의 `ReadOnly`에서 확인한다.
 
 ## 4. 결과 행의 제한
 
