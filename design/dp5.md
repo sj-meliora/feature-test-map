@@ -75,7 +75,41 @@
 
 기능 테이블만 있는 현재 범위에서는 에이전트가 `features.yaml`을 직접 세어도 답을 낼 수 있다(1장). 그러나 이를 허용하면 '계산은 SQL로 한다'는 규칙이 오류 상황에서만 지켜지지 않고, TC가 추가된 뒤에는 쓸 수 없는 방법이 절차에 남는다. 따라서 오류 상황에서도 직접 세지 않는다.
 
-## 3. 질의 예시
+## 3. 집계 뷰
+
+기능, 인스턴스 시나리오, 관계를 조인하는 집계는 다음 뷰로 정의한다. 기능 테이블만 다루는 뷰(`v_leaf_feature`, `v_feature_subtree`)는 [dp1.md](dp1.md)에 있다. 뷰를 정의하는 SQL의 원문은 스킬의 정의 파일(`schema.sql`)에 있다.
+
+| 뷰 | 한 행의 의미 | 열 |
+|---|---|---|
+| `v_feature_tc` | (말단 기능, 그 기능을 검증하는 TC) 쌍 하나. 중복이 없다. | `feature_id`, `tc_id` |
+| `v_scenario_tc_count` | 인스턴스 시나리오 하나 | `scenario_id`, `feature_id`, `tc_count` |
+| `v_feature_tc_count` | 말단 기능 하나 | `feature_id`, `scenario_count`, `uncovered_scenario_count`, `tc_count` |
+| `v_subtree_tc_count` | 기능 하나. 묶음 기능과 말단 기능을 모두 포함한다. | `feature_id`, `leaf_count`, `uncovered_leaf_count`, `tc_count` |
+| `v_unlinked_tc` | 어느 인스턴스 시나리오에도 연결되지 않은 TC 하나 | `tc` 테이블과 같다. |
+
+- `tc_count`는 그 행의 대상에 연결된 TC의 수이며, 같은 TC는 한 번만 센다.
+- `scenario_count`는 그 기능에 속한 인스턴스 시나리오의 수다. `uncovered_scenario_count`는 그중에서 TC가 하나도 연결되지 않은 시나리오의 수다.
+- `leaf_count`는 그 기능 아래에 있는 말단 기능의 수다. 말단 기능 자신의 행에서는 1이다. `uncovered_leaf_count`는 그중에서 TC가 하나도 연결되지 않은 기능의 수다.
+
+검증 공백은 다음과 같이 구한다.
+
+| 구하는 것 | 방법 |
+|---|---|
+| 인스턴스 시나리오 단위의 공백 | `v_scenario_tc_count`에서 `tc_count = 0`인 행 |
+| 검증되지 않은 기능 | `v_feature_tc_count`에서 `tc_count = 0`인 행 |
+| 묶음 기능 아래의 검증되지 않은 기능의 수 | `v_subtree_tc_count`에서 그 묶음의 `uncovered_leaf_count` |
+
+묶음 기능 `NS` 아래에 `NS-CREATE`와 `NS-DELETE`가 있고 관계가 다음과 같은 경우를 예로 든다.
+
+| 인스턴스 시나리오 | 연결된 TC |
+|---|---|
+| `NS-CREATE-S1` | TC 1, TC 2 |
+| `NS-CREATE-S2` | TC 2 |
+| `NS-DELETE-S1` | TC 2, TC 3 |
+
+`v_scenario_tc_count`의 `tc_count`는 차례로 2, 1, 2다. `v_feature_tc_count`에서 `NS-CREATE`는 2(TC 1, TC 2), `NS-DELETE`는 2(TC 2, TC 3)다. `v_subtree_tc_count`에서 `NS`는 3(TC 1, TC 2, TC 3)이며, 하위 기능의 값을 더한 4가 아니다.
+
+## 4. 질의 예시
 
 아래 결과는 `examples/features.yaml`의 **예시 데이터**로 만든 데이터베이스에서 실제로 실행한 결과다. [dp1.md](dp1.md)의 테이블 정의와 뷰를 그대로 사용하였다. 같은 질의와 결과를 `tests/test_ftm_query.py`의 `QueryExamples`에서 확인한다.
 

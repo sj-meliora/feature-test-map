@@ -238,12 +238,12 @@ p.foot { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 90ch; }
 <line class="rel" x1="61" y1="114" x2="61" y2="126"/><text class="card1" x="48" y="111" text-anchor="middle">0..1</text>
 <rect class="card view" x="540" y="356" width="290" height="104" rx="6"/>
 <path class="head view" d="M540,396 V362 a6,6 0 0 1 6,-6 H824 a6,6 0 0 1 6,6 V396 Z"/>
-<text class="tname view" x="554" y="381">기능별 TC 개수</text>
+<text class="tname view" x="554" y="381">기능별 TC 개수 <tspan class="en">v_feature_tc_count</tspan></text>
 <rect class="tagbox view" x="776" y="367" width="42" height="18" rx="9"/><text class="tag view" x="797.0" y="380" text-anchor="middle">VIEW</text>
-<text class="col" x="590" y="416.5">기능 ID</text>
+<text class="col" x="590" y="416.5">기능 ID <tspan class="en">feature_id</tspan></text>
 <text class="typ" x="818" y="416" text-anchor="end">TEXT</text>
 <line class="sep" x1="541" y1="428" x2="829" y2="428"/>
-<text class="col" x="590" y="448.5">TC 개수</text>
+<text class="col" x="590" y="448.5">TC 개수 <tspan class="en">tc_count</tspan></text>
 <text class="typ" x="818" y="448" text-anchor="end">INTEGER</text>
 <rect class="card edge view" x="540" y="356" width="290" height="104" rx="6"/>
 <path class="src" d="M205,296 V420 q0,8 8,8 H540"/>
@@ -302,7 +302,7 @@ p.foot { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 90ch; }
     </section>
   </div>
 
-  <p class="foot">항목 이름은 DESIGN.md의 표기를 따른다. 네 테이블의 영문 이름과 자료형은 DP-1, DP-2, DP-3, DP-7에서 결정한 내용이며, 테이블 이름은 왼쪽부터 feature, scenario, scenario_tc, tc다. TC 테이블의 suite는 한글 표기와 영문 이름이 같다. 그림에 있는 뷰의 이름과 항목은 제안이다. DP-1에서 결정한 뷰(v_leaf_feature, v_feature_subtree)와 생성 정보를 담는 build_info 테이블은 이 그림에 나타내지 않았으며, design/dp1.md와 design/dp4.md에 있다. 기준: DESIGN.md의 DP-1부터 DP-5까지와 DP-7.</p>
+  <p class="foot">항목 이름은 DESIGN.md의 표기를 따른다. 네 테이블의 영문 이름과 자료형은 DP-1, DP-2, DP-3, DP-7에서 결정한 내용이며, 테이블 이름은 왼쪽부터 feature, scenario, scenario_tc, tc다. TC 테이블의 suite는 한글 표기와 영문 이름이 같다. 그림의 뷰는 DP-5에서 결정한 v_feature_tc_count이며, 열 가운데 두 개만 나타냈다. 나머지 열과 그 밖의 뷰는 design/dp1.md와 design/dp5.md에, 생성 정보를 담는 build_info 테이블은 design/dp4.md에 있다. 기준: DESIGN.md의 DP-1부터 DP-5까지와 DP-7.</p>
 </div>
 </body>
 </html>
