@@ -1,0 +1,111 @@
+# 예시 데이터다. 실제 기능에서 구성한 내용이 아니다.
+#
+# 인스턴스 시나리오 레코드(DP-7). 레코드 하나가 인스턴스 시나리오 하나다.
+#   id               고유 ID. <기능 ID>-S<번호> 형식이며, 사용자가 직접 부여한다.
+#   feature_id       이 시나리오가 속한 기능의 ID. 검증 대상인 말단 기능이어야 한다.
+#   stimulus         자극
+#   environment      환경
+#   response         응답
+#   response_measure 응답 측정
+#
+# 검증 대상인 기능은 인스턴스 시나리오를 하나 이상 가진다. 아래에서 NS-CREATE와
+# SANITIZE는 인스턴스 시나리오를 두 개 가진다.
+
+- id: NS-CREATE-S1
+  feature_id: NS-CREATE
+  stimulus: >-
+    호스트가 Namespace Management 커맨드(Create)를 보낸다.
+  environment: >-
+    미할당 용량이 요청한 크기보다 크고, namespace 수가 최대보다 적다.
+  response: >-
+    새 namespace를 만들고 NSID를 할당한 뒤 커맨드를 성공으로 완료한다.
+  response_measure: >-
+    완료 상태가 성공이고, Identify의 namespace 목록에 새 NSID가 나타난다.
+
+- id: NS-CREATE-S2
+  feature_id: NS-CREATE
+  stimulus: >-
+    호스트가 Namespace Management 커맨드(Create)를 보낸다.
+  environment: >-
+    미할당 용량이 요청한 크기보다 작다.
+  response: >-
+    namespace를 만들지 않고 커맨드를 오류로 완료한다.
+  response_measure: >-
+    완료 상태가 Namespace Insufficient Capacity이고, namespace 목록이 바뀌지 않는다.
+
+- id: NS-DELETE-S1
+  feature_id: NS-DELETE
+  stimulus: >-
+    호스트가 Namespace Management 커맨드(Delete)를 보낸다.
+  environment: >-
+    지정한 NSID의 namespace가 존재하고, 어느 컨트롤러에도 연결되어 있지 않다.
+  response: >-
+    namespace를 삭제하고 그 용량을 미할당 용량으로 되돌린 뒤 커맨드를 성공으로 완료한다.
+  response_measure: >-
+    완료 상태가 성공이고, namespace 목록에서 NSID가 사라지며, 미할당 용량이 삭제한 크기만큼 늘어난다.
+
+- id: FORMAT-S1
+  feature_id: FORMAT
+  stimulus: >-
+    호스트가 Format NVM 커맨드를 보낸다.
+  environment: >-
+    namespace에 사용자 데이터가 기록되어 있고, 진행 중인 입출력이 없다.
+  response: >-
+    지정한 LBA 형식으로 바꾸고, 지정한 방식으로 사용자 데이터를 삭제한 뒤 커맨드를 성공으로 완료한다.
+  response_measure: >-
+    완료 상태가 성공이고, Identify의 LBA 형식이 지정한 값이며, 이전에 기록한 데이터가 읽히지 않는다.
+
+- id: SANITIZE-S1
+  feature_id: SANITIZE
+  stimulus: >-
+    호스트가 Sanitize 커맨드를 보낸다.
+  environment: >-
+    모든 namespace에 사용자 데이터가 기록되어 있고, 동작이 끝날 때까지 전원이 유지된다.
+  response: >-
+    지정한 방식으로 모든 사용자 데이터를 복구할 수 없게 삭제한다.
+  response_measure: >-
+    Sanitize Status 로그의 상태가 완료이고, 이전에 기록한 데이터가 어느 LBA에서도 읽히지 않는다.
+
+- id: SANITIZE-S2
+  feature_id: SANITIZE
+  stimulus: >-
+    호스트가 Sanitize 커맨드를 보낸다.
+  environment: >-
+    동작이 진행되는 도중에 예고 없이 전원이 꺼졌다가 다시 켜진다.
+  response: >-
+    전원이 다시 켜진 뒤 중단된 동작을 이어서 완료한다. 완료하기 전에는 입출력 커맨드를 거부한다.
+  response_measure: >-
+    전원이 켜진 직후의 입출력 커맨드가 Sanitize In Progress로 완료되고, 이후 Sanitize Status 로그의 상태가 완료로 바뀐다.
+
+- id: FLUSH-S1
+  feature_id: FLUSH
+  stimulus: >-
+    호스트가 Flush 커맨드를 보낸다.
+  environment: >-
+    휘발성 쓰기 캐시가 켜져 있고, 캐시에 아직 기록되지 않은 쓰기 데이터가 있다.
+  response: >-
+    캐시의 데이터를 비휘발성 매체에 기록한 뒤 커맨드를 성공으로 완료한다.
+  response_measure: >-
+    완료 상태가 성공이고, 완료 이후에 전원이 꺼져도 그 데이터가 그대로 읽힌다.
+
+- id: PS-TRANSITION-S1
+  feature_id: PS-TRANSITION
+  stimulus: >-
+    호스트가 Set Features(Power Management)로 power state를 지정한다.
+  environment: >-
+    컨트롤러가 다른 power state에 있고, 진행 중인 입출력이 없다.
+  response: >-
+    지정한 power state로 전환한 뒤 커맨드를 성공으로 완료한다.
+  response_measure: >-
+    Get Features가 지정한 power state를 돌려주고, 전환에 걸린 시간이 Identify에 적힌 전환 지연 시간 이내다.
+
+- id: SPOR-S1
+  feature_id: SPOR
+  stimulus: >-
+    예고 없이 전원이 꺼졌다가 다시 켜진다.
+  environment: >-
+    전원이 꺼지는 시점에 쓰기 입출력이 진행 중이다.
+  response: >-
+    매핑 정보를 복구하고 컨트롤러가 준비 상태가 된다.
+  response_measure: >-
+    컨트롤러가 제한 시간 안에 준비 상태가 되고, 완료 응답을 보낸 쓰기 데이터가 모두 그대로 읽힌다.

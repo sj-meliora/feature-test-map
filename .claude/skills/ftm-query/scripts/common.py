@@ -15,8 +15,11 @@ BUILD_SCRIPT = SKILL_DIR / "scripts" / "build.py"
 VENDOR_DIR = SKILL_DIR / "vendor"
 
 FEATURES_FILE = "features.yaml"
-# 해시에 포함하는 원본 파일. 테이블이 추가되면 이 목록에 원본 파일을 추가한다.
-SOURCE_FILES = (FEATURES_FILE,)
+SCENARIOS_FILE = "scenarios.yaml"
+TCS_FILE = "tcs.jsonl"
+RELATIONS_FILE = "scenario_tc.jsonl"
+# 원본 파일. 변환에는 네 파일이 모두 있어야 하며, 해시는 네 파일의 내용으로 계산한다.
+SOURCE_FILES = (FEATURES_FILE, SCENARIOS_FILE, TCS_FILE, RELATIONS_FILE)
 
 
 class FtmError(Exception):
@@ -29,13 +32,13 @@ def resolve_data_dir():
     if not value:
         raise FtmError(
             f"환경 변수 {ENV_VAR}이 설정되지 않았다.\n"
-            f"데이터 폴더({FEATURES_FILE}이 있는 폴더)의 경로를 {ENV_VAR}에 설정한 뒤 다시 실행한다."
+            f"데이터 폴더(원본 파일이 있는 폴더)의 경로를 {ENV_VAR}에 설정한 뒤 다시 실행한다."
         )
     path = Path(value).expanduser().resolve()
     if not path.is_dir():
         raise FtmError(
             f"{ENV_VAR}이 가리키는 폴더가 없다: {path}\n"
-            f"데이터 폴더({FEATURES_FILE}이 있는 폴더)의 경로를 {ENV_VAR}에 설정한 뒤 다시 실행한다."
+            f"데이터 폴더(원본 파일이 있는 폴더)의 경로를 {ENV_VAR}에 설정한 뒤 다시 실행한다."
         )
     return path
 
@@ -54,7 +57,10 @@ def source_hash(data_dir):
     for name in SOURCE_FILES:
         path = data_dir / name
         if not path.is_file():
-            raise FtmError(f"원본 파일이 없다: {path}\n데이터 폴더: {data_dir}")
+            raise FtmError(
+                f"원본 파일이 없다: {path}\n데이터 폴더: {data_dir}\n"
+                f"데이터 폴더에는 원본 파일 {', '.join(SOURCE_FILES)}이 모두 있어야 한다."
+            )
         h.update(name.encode("utf-8"))
         h.update(b"\0")
         h.update(hashlib.sha256(path.read_bytes()).digest())
