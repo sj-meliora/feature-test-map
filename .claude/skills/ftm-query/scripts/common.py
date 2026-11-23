@@ -2,10 +2,11 @@
 
 import hashlib
 import os
+import re
 import shlex
 import sqlite3
 import sys
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 ENV_VAR = "FTM_DATA_DIR"
 
@@ -27,8 +28,32 @@ class FtmError(Exception):
     """사용자에게 메시지를 보이고 종료해야 하는 오류."""
 
 
-def resolve_data_dir():
-    """환경 변수에서 데이터 폴더의 절대 경로를 구한다. 기본 경로를 추측하지 않는다."""
+def configure_output():
+    """출력이 다른 프로그램으로 넘어갈 때에는 UTF-8로 쓴다.
+
+    Windows에서는 넘겨지는 출력의 기본 인코딩이 UTF-8이 아니어서, 에이전트가 한글 메시지를 읽지 못한다.
+    화면에 직접 출력할 때에는 그대로 둔다. 인코딩할 수 없는 문자 때문에 종료하지 않도록 한다.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            if stream.isatty():
+                stream.reconfigure(errors="backslashreplace")
+            else:
+                stream.reconfigure(encoding="utf-8", errors="backslashreplace")
+        except (AttributeError, ValueError):
+            pass
+
+
+def resolve_data_dir(argument=None):
+    """데이터 폴더의 절대 경로를 구한다. 기본 경로를 추측하지 않는다.
+
+    변환 명령과 보고서 명령은 --data-dir 인자로도 경로를 받으며, 인자가 있으면 환경 변수보다 앞선다.
+    """
+    if argument is not None and argument.strip():
+        path = Path(argument.strip()).expanduser().resolve()
+        if not path.is_dir():
+            raise FtmError(f"--data-dir이 가리키는 폴더가 없다: {path}")
+        return path
     value = os.environ.get(ENV_VAR, "").strip()
     if not value:
         raise FtmError(
@@ -73,12 +98,43 @@ def schema_hash():
     return _sha256(SCHEMA_PATH.read_bytes())
 
 
+# Windows의 셸에서 따옴표로 감싸지 않고는 명령의 이름으로 쓸 수 없는 문자.
+_UNSAFE_IN_COMMAND = re.compile(r"""[\s"'&^%!$`()<>|;]""")
+
+
+def command_line(script, data_dir, windows=None, executable=None):
+    """스크립트를 데이터 폴더와 함께 실행하는 줄. 사용자가 그대로 복사하여 실행한다.
+
+    데이터 폴더는 --data-dir 인자로 넣는다. 환경 변수를 줄 앞에 붙이는 표기는 셸마다 달라서 쓰지 않는다.
+
+    Windows에서는 cmd, PowerShell, Git Bash에서 모두 읽히도록 다음과 같이 적는다.
+    - 경로의 구분 문자는 '/'로 적는다. '\\'는 Git Bash에서 다음 문자와 합쳐져 사라진다.
+    - 인자는 큰따옴표로 감싼다. 작은따옴표는 cmd에서 따옴표로 읽히지 않는다.
+    - 실행 파일은 따옴표로 감싸지 않는다. PowerShell은 따옴표로 시작하는 줄을 명령으로 실행하지 않는다.
+      경로에 공백과 같은 문자가 있어 감싸야 하는 경우에는 경로 대신 이름(python)만 적는다.
+    """
+    if windows is None:
+        windows = os.name == "nt"
+    if executable is None:
+        executable = sys.executable
+    if not windows:
+        return (
+            f"{shlex.quote(executable or 'python3')} {shlex.quote(str(script))} "
+            f"--data-dir {shlex.quote(str(data_dir))}"
+        )
+
+    def posix(path):
+        return PureWindowsPath(str(path)).as_posix()
+
+    program = posix(executable) if executable else "python"
+    if _UNSAFE_IN_COMMAND.search(program):
+        program = "python"
+    return f'{program} "{posix(script)}" --data-dir "{posix(data_dir)}"'
+
+
 def build_command_line(data_dir):
-    """같은 사본의 변환 명령을 실행하는 줄. 환경 변수의 값을 함께 지정한다."""
-    return (
-        f"{ENV_VAR}={shlex.quote(str(data_dir))} "
-        f"{shlex.quote(sys.executable or 'python3')} {shlex.quote(str(BUILD_SCRIPT))}"
-    )
+    """같은 사본의 변환 명령을 실행하는 줄."""
+    return command_line(BUILD_SCRIPT, data_dir)
 
 
 # ---------------------------------------------------------------------------

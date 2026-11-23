@@ -29,7 +29,7 @@ TC의 suite, 이름, 소스 코드 이름은 지어낸 값이며, 가리키는 �
 
 ## 데모 실행
 
-저장소 최상위에서 실행한다. Python 3이 필요하다. PyYAML이 설치되어 있지 않으면 스킬에 포함된 사본을 사용한다.
+저장소 최상위에서 실행한다. Python 3이 필요하다. PyYAML이 설치되어 있지 않으면 스킬에 포함된 사본을 사용한다. 아래의 명령은 bash 계열의 셸을 기준으로 적었다. Windows에서는 `python3` 대신 `python`을 쓰며, 1번의 환경 변수는 아래 'Windows에서'의 방법으로 지정한다.
 
 1. 데이터 폴더의 경로를 환경 변수로 지정한다.
 
@@ -56,6 +56,12 @@ TC의 suite, 이름, 소스 코드 이름은 지어낸 값이며, 가리키는 �
    python3 .claude/skills/ftm-query/report/report.py
    ```
 
+변환 명령과 보고서 명령은 환경 변수 대신 `--data-dir` 인자로 데이터 폴더를 받을 수도 있다.
+
+```bash
+python3 .claude/skills/ftm-query/scripts/build.py --data-dir examples
+```
+
 에이전트 없이 조회 스크립트를 직접 실행할 수도 있다.
 
 ```bash
@@ -67,3 +73,15 @@ python3 .claude/skills/ftm-query/scripts/query.py sql "SELECT * FROM v_feature_t
 ```
 
 원본 파일을 고친 뒤에는 2번의 변환 명령과 4번의 보고서 명령을 다시 실행한다. 변환 명령을 다시 실행하지 않으면 조회 스크립트와 보고서 명령이 오류로 종료하고 실행할 명령을 안내한다.
+
+### Windows에서
+
+환경 변수는 셸에 따라 다음과 같이 지정한다. 에이전트는 이 환경 변수가 지정된 셸에서 실행해야 조회 스크립트가 데이터 폴더를 찾는다.
+
+| 셸 | 지정하는 방법 |
+|---|---|
+| PowerShell | `$env:FTM_DATA_DIR = "$PWD\examples"` |
+| cmd | `set "FTM_DATA_DIR=%CD%\examples"` |
+| Git Bash | `export FTM_DATA_DIR="$PWD/examples"` |
+
+조회 스크립트의 오류 메시지에 있는 실행 줄은 세 셸에서 모두 그대로 실행되도록 적혀 있다.

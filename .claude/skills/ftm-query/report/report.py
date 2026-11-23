@@ -2,7 +2,7 @@
 """보고서 명령: 조회용 SQLite 데이터베이스에서 검증 공백 보고서(HTML 파일 하나)를 만든다.
 
 사용자가 실행한다. 데이터베이스가 없거나 오래되었으면 오류로 종료한다.
-데이터 폴더는 환경 변수 FTM_DATA_DIR로 전달받으며, 보고서는 그 폴더의 build/report.html에 만든다.
+데이터 폴더는 --data-dir 인자나 환경 변수 FTM_DATA_DIR로 전달받으며, 보고서는 그 폴더의 build/report.html에 만든다.
 보고서의 수치는 조회 스크립트와 같은 집계 뷰에서 읽는다.
 보고서는 '검증 공백'과 '관계 지도'의 두 화면으로 구성되며, 두 화면은 틀(template.html) 안에 있다.
 
@@ -13,6 +13,7 @@ import sys
 
 sys.dont_write_bytecode = True
 
+import argparse
 import datetime
 import json
 import os
@@ -144,8 +145,13 @@ def write_atomically(path, text):
 
 
 def main():
+    common.configure_output()
+    parser = argparse.ArgumentParser(description="Feature-Test Map 보고서 명령")
+    parser.add_argument("--data-dir", help="데이터 폴더의 경로. 없으면 환경 변수 FTM_DATA_DIR을 쓴다.")
+    args = parser.parse_args()
+
     try:
-        data_dir = common.resolve_data_dir()
+        data_dir = common.resolve_data_dir(args.data_dir)
         conn, info = common.open_checked(data_dir)
         try:
             data = collect(conn, info, data_dir)
