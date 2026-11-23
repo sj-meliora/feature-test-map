@@ -161,7 +161,7 @@ p.foot { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 100ch; }
   <figure>
     <div class="vtitle"><b>C&amp;C View</b><span>실행 시점의 컴포넌트와 커넥터 · shared-data 스타일과 call-return 스타일</span></div>
     <div class="scroll">
-<svg viewBox="0 0 1460 600" role="img" aria-label="C&amp;C View. 사용자와 추출 컴포넌트가 원본 저장소에 쓴다. 사용자가 DB 생성을 실행하면 DB 생성이 원본을 조회용 SQLite DB로 변환한다. 질의 에이전트는 기능과 인스턴스 시나리오를 원본에서 전체로 읽고, TC와 관계는 조회 스크립트에 SQL을 보내어 조회한다. 조회 스크립트는 원본을 읽어 해시를 계산한다.">
+<svg viewBox="0 0 1460 750" role="img" aria-label="C&amp;C View. 사용자와 추출 컴포넌트가 원본 저장소에 쓴다. 사용자가 DB 생성을 실행하면 DB 생성이 원본을 조회용 SQLite DB로 변환한다. 질의 에이전트는 기능과 인스턴스 시나리오를 원본에서 전체로 읽고, TC와 관계는 조회 스크립트에 SQL을 보내어 조회한다. 조회 스크립트는 원본을 읽어 해시를 계산한다. 사용자가 보고서 생성을 실행하면 보고서 생성이 조회용 SQLite DB를 읽어 검증 공백 보고서를 만든다.">
 <defs>
   <marker id="ctip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="tip" d="M0,1 L10,5 L0,9 Z"/></marker>
   <marker id="ctipo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path class="tip-o" d="M1,1 L9,5 L1,9"/></marker>
@@ -216,6 +216,14 @@ p.foot { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 100ch; }
 <text class="st " x="1222" y="489">«database»</text>
 <text class="name" x="1222" y="510">조회용 SQLite DB</text>
 <text class="desc" x="1222" y="530">테이블 4개, 집계 뷰</text>
+<rect class="box script" x="930" y="630" width="190" height="80" rx="4"/>
+<text class="st script" x="942" y="649">«component · 스킬»</text>
+<text class="name" x="942" y="670">보고서 생성</text>
+<text class="desc" x="942" y="690">DB를 읽어 보고서를 만든다</text>
+<rect class="box plain" x="1210" y="630" width="200" height="80" rx="4"/>
+<text class="st " x="1222" y="649">«file · HTML»</text>
+<text class="name" x="1222" y="670">검증 공백 보고서</text>
+<text class="desc" x="1222" y="690">검증 공백, 관계 지도 · FR-4</text>
 <path class="conn talk" d="M820,68 H1080 V140" marker-end="url(#ctiph)" marker-start="url(#ctiph)"/>
 <text class="lbl talk" x="950" y="60" text-anchor="middle">질의 · 응답</text>
 <path class="conn data" d="M730,96 V300" marker-end="url(#ctipo)"/>
@@ -247,10 +255,18 @@ p.foot { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 100ch; }
 <text class="lbl " x="895" y="502" text-anchor="middle">읽기</text>
 <path class="conn data" d="M1120,510 H1210" marker-end="url(#ctipo)"/>
 <text class="lbl " x="1165" y="502" text-anchor="middle">생성</text>
+<path class="conn " d="M880,452 V600 H1000 V630" marker-end="url(#ctip)"/>
+<text class="lbl " x="888" y="592">실행 (보고서)</text>
+<path class="conn data" d="M800,570 V670 H930" marker-end="url(#ctipo)"/>
+<text class="lbl " x="808" y="662">읽기 (해시)</text>
+<path class="conn " d="M1120,650 H1165 V590 H1310 V550" marker-end="url(#ctip)"/>
+<text class="lbl " x="1173" y="582">질의</text>
+<path class="conn data" d="M1120,690 H1210" marker-end="url(#ctipo)"/>
+<text class="lbl " x="1165" y="682" text-anchor="middle">생성</text>
 </svg>
     </div>
     <figcaption>
-      <p>원본 저장소의 텍스트 파일이 원본이며, 조회용 SQLite DB는 원본에서 생성한다. DB 생성은 사용자가 실행할 때에만 동작한다. 조회 스크립트는 DB를 만들지 않는다. 질의를 실행하기 전에 원본을 읽어 해시를 계산하고, DB에 기록된 해시와 비교하여 DB가 없거나 원본보다 오래되었으면 오류로 종료한다. 질의 에이전트는 기능과 인스턴스 시나리오를 전체로 읽어 질의의 의미를 기능 ID로 바꾸고, TC와 관계는 읽기 전용 조회 스크립트에 SQL을 보내어 조회한다.</p>
+      <p>원본 저장소의 텍스트 파일이 원본이며, 조회용 SQLite DB는 원본에서 생성한다. DB 생성은 사용자가 실행할 때에만 동작한다. 조회 스크립트는 DB를 만들지 않는다. 질의를 실행하기 전에 원본을 읽어 해시를 계산하고, DB에 기록된 해시와 비교하여 DB가 없거나 원본보다 오래되었으면 오류로 종료한다. 질의 에이전트는 기능과 인스턴스 시나리오를 전체로 읽어 질의의 의미를 기능 ID로 바꾸고, TC와 관계는 읽기 전용 조회 스크립트에 SQL을 보내어 조회한다. 보고서 생성도 사용자가 실행할 때에만 동작하며, 조회 스크립트와 같은 방법으로 DB가 최신인지 검사한 뒤 집계 뷰를 읽어 HTML 파일 하나를 만든다. 사용자는 이 파일을 브라우저로 연다. 질의 에이전트는 보고서 생성을 실행하지 않는다.</p>
       <div class="marks">
         <span><span class="chip llm"></span>컴포넌트 (LLM 에이전트)</span>
         <span><span class="chip script"></span>컴포넌트</span>
@@ -266,7 +282,7 @@ p.foot { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 100ch; }
   <figure>
     <div class="vtitle"><b>Module View</b><span>코드 단위의 분할과 사용 관계 · decomposition 스타일과 uses 스타일</span></div>
     <div class="scroll">
-<svg viewBox="0 0 1460 520" role="img" aria-label="Module View. 저장소 안에 스킬 패키지와 기능 추출, TC 추출, 관계 식별 모듈이 있다. 스킬 패키지는 조회 스크립트, 안내 문서, DB 생성, 테이블·뷰 정의로 구성된다. DB 생성과 조회 스크립트는 테이블·뷰 정의를 사용하고, 안내 문서는 DB 생성이 만드는 스키마를 설명한다.">
+<svg viewBox="0 0 1460 520" role="img" aria-label="Module View. 저장소 안에 스킬 패키지와 기능 추출, TC 추출, 관계 식별 모듈이 있다. 스킬 패키지는 조회 스크립트, 안내 문서, DB 생성, 테이블·뷰 정의, 보고서 생성으로 구성된다. DB 생성, 조회 스크립트, 보고서 생성은 테이블·뷰 정의를 사용하고, 안내 문서는 DB 생성이 만드는 스키마를 설명한다.">
 <defs>
   <marker id="mtip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="tip" d="M0,1 L10,5 L0,9 Z"/></marker>
   <marker id="mtipo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path class="tip-o" d="M1,1 L9,5 L1,9"/></marker>
@@ -274,7 +290,7 @@ p.foot { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 100ch; }
 </defs>
 <rect class="pkg outer" x="40" y="48" width="270" height="24"/><rect class="pkg outer" x="40" y="72" width="1150" height="420"/>
 <text class="st llm" x="50" y="64">«package»</text><text class="pname" x="122" y="65">feature-test-map 저장소</text>
-<rect class="pkg" x="70" y="126" width="170" height="24"/><rect class="pkg" x="70" y="150" width="860" height="180"/><text class="st llm" x="80" y="142">«package»</text><text class="pname" x="152" y="143">스킬</text><text class="zsub" x="84" y="172">플러그인으로 설치한다. 데이터 경로는 설정으로 받는다</text>
+<rect class="pkg" x="70" y="126" width="170" height="24"/><rect class="pkg" x="70" y="150" width="1070" height="180"/><text class="st llm" x="80" y="142">«package»</text><text class="pname" x="152" y="143">스킬</text><text class="zsub" x="84" y="172">플러그인으로 설치한다. 데이터 폴더의 경로는 환경 변수로 받는다</text>
 <rect class="box plain" x="95" y="200" width="180" height="84" rx="4"/>
 <text class="st " x="107" y="219">«module»</text>
 <text class="name" x="107" y="240">조회 스크립트</text>
@@ -291,6 +307,10 @@ p.foot { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 100ch; }
 <text class="st " x="737" y="219">«module»</text>
 <text class="name" x="737" y="240">테이블·뷰 정의</text>
 <text class="desc" x="737" y="260">스키마와 집계 뷰의 SQL</text>
+<rect class="box plain" x="935" y="200" width="180" height="84" rx="4"/>
+<text class="st " x="947" y="219">«module»</text>
+<text class="name" x="947" y="240">보고서 생성</text>
+<text class="desc" x="947" y="260">검증 공백 보고서(HTML)</text>
 <rect class="box plain" x="600" y="370" width="160" height="84" rx="4"/>
 <text class="st " x="612" y="389">«module»</text>
 <text class="name" x="612" y="410">기능 추출</text>
@@ -315,12 +335,16 @@ p.foot { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 100ch; }
 <text class="lbl mono" x="1010" y="102" text-anchor="middle">«uses»</text>
 <path class="conn dep" d="M140,284 V350 H1335 V284" marker-end="url(#mtipo)"/>
 <text class="lbl mono" x="1060" y="342" text-anchor="middle">«uses»</text>
+<path class="conn dep" d="M935,242 H905" marker-end="url(#mtipo)"/>
+<text class="lbl mono" x="920" y="192" text-anchor="middle">«uses»</text>
+<path class="conn dep" d="M1115,242 H1240" marker-end="url(#mtipo)"/>
+<text class="lbl mono" x="1215" y="228" text-anchor="middle">«uses»</text>
 <path class="conn dep" d="M485,242 H515" marker-end="url(#mtipo)"/>
 <text class="lbl mono" x="500" y="192" text-anchor="middle">«describes»</text>
 </svg>
     </div>
     <figcaption>
-      <p>스킬 패키지는 저장소 안에 두고 플러그인으로 설치하며, 조회 스크립트, 안내 문서, DB 생성, 테이블·뷰 정의로 구성된다. DB 생성과 조회 스크립트는 같은 정의를 사용한다. 두 모듈이 함께 설치되므로, 설치된 사본 안에서 정의가 서로 어긋나지 않는다. 안내 문서는 DB 생성이 만드는 스키마와 뷰를 글로 설명하므로, 스키마나 뷰를 고치면 안내 문서도 함께 고친다.</p>
+      <p>스킬 패키지는 저장소 안에 두고 플러그인으로 설치하며, 조회 스크립트, 안내 문서, DB 생성, 테이블·뷰 정의, 보고서 생성으로 구성된다. DB 생성, 조회 스크립트, 보고서 생성은 같은 정의를 사용한다. 세 모듈이 함께 설치되므로, 설치된 사본 안에서 정의가 서로 어긋나지 않는다. 안내 문서는 DB 생성이 만드는 스키마와 뷰를 글로 설명하므로, 스키마나 뷰를 고치면 안내 문서도 함께 고친다. 보고서 생성은 조회 스크립트와 DB 생성을 사용하지 않으며, 스킬을 플러그인으로 구성할 때 분리할 수 있게 한다. 세 모듈이 함께 쓰는 경로 해석과 최신성 검사는 이 도면에 따로 나타내지 않았다.</p>
       <div class="marks">
         <span><svg class="lg" viewBox="0 0 30 12"><rect class="pkg" x="2" y="1" width="26" height="10"/></svg>패키지</span>
         <span><span class="chip"></span>모듈, 문서, 라이브러리</span>
@@ -329,7 +353,7 @@ p.foot { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 100ch; }
     </figcaption>
   </figure>
 
-  <p class="foot">이 도면은 DESIGN.md에서 결정된 내용만 나타낸다. 제안과 미결 사항은 DESIGN.md에서 관리하며, 결정된 뒤에 이 도면에 반영한다. 두 뷰는 같은 구조를 실행 시점과 코드 단위의 두 관점에서 나타낸다. 기준: DESIGN.md의 DP-1부터 DP-7까지.</p>
+  <p class="foot">이 도면은 DESIGN.md에서 결정된 내용만 나타낸다. 제안과 미결 사항은 DESIGN.md에서 관리하며, 결정된 뒤에 이 도면에 반영한다. 두 뷰는 같은 구조를 실행 시점과 코드 단위의 두 관점에서 나타낸다. 기준: DESIGN.md의 DP-1부터 DP-8까지.</p>
 </div>
 </body>
 </html>
