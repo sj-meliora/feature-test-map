@@ -9,6 +9,7 @@ SSD FW의 기능을 시나리오로 세분하고, 시나리오와 TC 사이의 �
 - `REQUIREMENT.md`: 요구사항. 이 프로젝트가 무엇을 해야 하는지는 이 문서를 기준으로 판단한다.
 - `DESIGN.md`: 설계 결정(DP). 결정된 내용, 미결 사항, 논의 내용을 DP 단위로 기록한다.
 - `docs/record-relations.html`: 레코드 관계도. 테이블의 구조와 참조 관계를 나타낸 그림이며, 테이블 구성을 바꾸면 함께 고친다.
+- `docs/fr1-ims-exploration.md`: FR-1 탐색 안내. IMS structure에 접근할 수 있는 사내 에이전트가 탐색을 시작하기 전에 읽는 문서이며, 설계 결정을 기록하는 문서가 아니다. DP-1이나 DP-4를 고치면 이 문서의 3장도 함께 고친다.
 - `design/`: DP별 세부 설계 문서(`dp1.md` 등). `DESIGN.md`의 각 DP에서 링크한다. 문서 안에 결정됨으로 표시한 항목을 제외하면 제안(미채택)이며, 채택한 내용은 `DESIGN.md`의 해당 DP에 반영한다.
 - `examples/`: 예시 데이터. 실제 데이터가 아니다.
 - `.claude/skills/ftm-query/`: 조회 스킬. 안내 문서(`SKILL.md`), 정의 파일(`schema.sql`), 조회 스크립트와 변환 명령(`scripts/`), 보고서 명령과 화면의 틀(`report/`), PyYAML의 사본(`vendor/`)으로 구성한다. `report/`는 `scripts/common.py`에만 의존하게 유지한다. `schema.sql`을 고치면 `SKILL.md`의 스키마 설명도 함께 고친다. `vendor/`의 파일은 고치지 않는다.
