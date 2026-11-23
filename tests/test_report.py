@@ -66,7 +66,10 @@ class Report(Base):
         html = self.built()
         self.assertTrue(html.startswith("<!doctype html>"))
         self.assertIn("<title>FTM 검증 공백 보고서</title>", html)
-        self.assertNotRegex(html, r"https?://", "보고서는 외부 자원을 불러오지 않는다")
+        # SVG 요소를 만들 때 쓰는 이름공간의 이름은 주소의 모양이지만 불러오는 자원이 아니다.
+        without_namespace = html.replace('"http://www.w3.org/2000/svg"', "")
+        self.assertNotRegex(without_namespace, r"https?://", "보고서는 외부 자원을 불러오지 않는다")
+        self.assertNotRegex(html, r"<(?:link|img|iframe)\b|\bsrc=", "보고서는 외부 자원을 불러오지 않는다")
         self.assertNotIn("/*__DATA__*/", html)
         self.assertEqual(sorted(p.name for p in self.report.parent.iterdir()), ["ftm.db", "report.html"])
 
@@ -74,7 +77,8 @@ class Report(Base):
         text = record("A").replace("설명이다.", "'</script><script>alert(1)</script> & <b>굵게</b>'")
         self.write_features(text, leaves=["A"])
         html = self.built()
-        self.assertEqual(html.count("</script>"), 2)
+        template = (SKILL / "report" / "template.html").read_text(encoding="utf-8")
+        self.assertEqual(html.count("</script>"), template.count("</script>"))
         self.assertEqual(embedded_data(html)["features"][0]["description"], "</script><script>alert(1)</script> & <b>굵게</b>")
 
     def test_database_missing_or_stale(self):
@@ -109,6 +113,14 @@ class Report(Base):
         imported = set(re.findall(r"^(?:import|from)\s+([\w.]+)", source, re.M))
         self.assertIn("common", imported)
         self.assertFalse(imported & {"query", "build"})
+
+    def test_report_has_both_views(self):
+        """파일 하나에 검증 공백 화면과 관계 지도 화면이 함께 들어 있다."""
+        html = self.built()
+        for fragment in ('id="view-gaps"', 'id="view-map"', 'id="tab-gaps"', 'id="tab-map"', "FTM.showInMap"):
+            self.assertIn(fragment, html)
+        ids = re.findall(r'\bid="([^"]+)"', html)
+        self.assertEqual(len(ids), len(set(ids)), "요소의 id가 겹치지 않는다")
 
     def test_env_not_set(self):
         result = self.run_script("../report/report.py", env_value=None)
