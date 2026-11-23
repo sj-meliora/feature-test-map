@@ -100,6 +100,7 @@ def cmd_schema(conn, info, data_dir):
     ).fetchall()
     print(f"데이터 폴더: {data_dir}")
     print(f"기능 원본: {data_dir / common.FEATURES_FILE}")
+    print(f"인스턴스 시나리오 원본: {data_dir / common.SCENARIOS_FILE}")
     print(f"데이터베이스: {common.db_path(data_dir)}")
     print(f"생성 시각: {info.get('built_at', '')}")
     print()

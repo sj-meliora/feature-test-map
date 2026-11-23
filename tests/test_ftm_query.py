@@ -4,7 +4,7 @@
 
     python3 -m unittest discover -s tests -v
 
-예시 데이터(examples/features.yaml)를 임시 폴더에 복사하여 사용하며, 저장소의 파일은 바꾸지 않는다.
+예시 데이터(examples/)를 임시 폴더에 복사하여 사용하며, 저장소의 파일은 바꾸지 않는다.
 """
 
 import hashlib
@@ -18,7 +18,8 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 SKILL = REPO / ".claude" / "skills" / "ftm-query"
-EXAMPLE = REPO / "examples" / "features.yaml"
+EXAMPLES = REPO / "examples"
+SOURCES = ("features.yaml", "scenarios.yaml", "tcs.jsonl", "scenario_tc.jsonl")
 
 HEADER = "- id: {id}\n  name: {name}\n  path: {path}\n  parent_id: {parent}\n  description: 설명이다.\n  ims_ref: REF-{id}\n"
 
@@ -28,13 +29,30 @@ def record(id, name=None, path=None, parent="null"):
     return HEADER.format(id=id, name=name, path=path or name, parent=parent)
 
 
+def scenario(id, feature_id):
+    return (
+        f"- id: '{id}'\n  feature_id: '{feature_id}'\n  stimulus: 자극이다.\n  environment: 환경이다.\n"
+        "  response: 응답이다.\n  response_measure: 응답 측정이다.\n"
+    )
+
+
+def jsonl(*records):
+    import json
+    return "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in records)
+
+
+def tc(id, suite="suite/a", name=None, source_file="test.py"):
+    return {"id": id, "suite": suite, "name": name or f"tc_{id}", "source_file": source_file}
+
+
 class Base(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="ftm-test-"))
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.data = self.tmp / "data"
         self.data.mkdir()
-        shutil.copy(EXAMPLE, self.data / "features.yaml")
+        for name in SOURCES:
+            shutil.copy(EXAMPLES / name, self.data / name)
         self.db = self.data / "build" / "ftm.db"
 
     def run_script(self, name, *args, skill=SKILL, env_value="__data__"):
@@ -58,8 +76,15 @@ class Base(unittest.TestCase):
     def sql(self, statement, **kw):
         return self.query("sql", statement, **kw)
 
-    def write_features(self, text):
-        (self.data / "features.yaml").write_text(text, encoding="utf-8")
+    def write(self, name, text):
+        (self.data / name).write_text(text, encoding="utf-8")
+
+    def write_features(self, text, leaves=()):
+        """기능 원본을 바꾸고, 나머지 원본은 leaves의 기능마다 시나리오 하나만 있는 상태로 만든다."""
+        self.write("features.yaml", text)
+        self.write("scenarios.yaml", "".join(scenario(f"{leaf}-S1", leaf) for leaf in leaves) or "[]\n")
+        self.write("tcs.jsonl", "")
+        self.write("scenario_tc.jsonl", "")
 
     def rows(self, result):
         """표 출력에서 머리글과 구분선을 뺀 행을 셀의 목록으로 돌려준다."""
@@ -120,7 +145,11 @@ class QueryExamples(Base):
         result = self.query("schema")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn(f"데이터 폴더: {self.data.resolve()}", result.stdout)
-        self.assertIn("- feature: 8", result.stdout)
+        self.assertIn(f"인스턴스 시나리오 원본: {self.data.resolve() / 'scenarios.yaml'}", result.stdout)
+        for line in ("- feature: 8", "- scenario: 9", "- tc: 20", "- scenario_tc: 19"):
+            self.assertIn(line, result.stdout)
+        for view in ("v_feature_tc", "v_scenario_tc_count", "v_feature_tc_count", "v_subtree_tc_count", "v_unlinked_tc"):
+            self.assertIn(f"CREATE VIEW {view} AS", result.stdout)
         self.assertIn("CREATE TABLE feature", result.stdout)
         self.assertIn("CREATE VIEW v_leaf_feature", result.stdout)
         self.assertIn("CREATE VIEW v_feature_subtree", result.stdout)
@@ -156,10 +185,23 @@ class Freshness(Base):
         self.assertIn("가리키는 폴더가 없다", result.stderr)
 
     def test_source_file_missing(self):
-        (self.data / "features.yaml").unlink()
-        result = self.query("schema")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("원본 파일이 없다", result.stderr)
+        """네 원본 중 하나라도 없으면 조회 스크립트와 변환 명령이 모두 오류로 종료한다."""
+        for name in SOURCES:
+            with self.subTest(name=name):
+                (self.data / name).unlink()
+                for result in (self.query("schema"), self.build()):
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(f"원본 파일이 없다: {self.data.resolve() / name}", result.stderr)
+                shutil.copy(EXAMPLES / name, self.data / name)
+        self.assertFalse(self.db.exists())
+
+    def test_any_source_change_makes_database_stale(self):
+        for name in SOURCES:
+            with self.subTest(name=name):
+                self.assertEqual(self.build().returncode, 0)
+                with open(self.data / name, "a", encoding="utf-8") as f:
+                    f.write("\n")
+                self.assert_stale(self.sql("SELECT 1"), "원본이 데이터베이스를 만든 뒤에 바뀌었다")
 
     def test_database_missing(self):
         line = self.assert_stale(self.query("schema"), "데이터베이스가 아직 만들어지지 않았다")
@@ -267,13 +309,14 @@ class ReadOnly(Base):
         before = (self.data / "features.yaml").read_bytes()
         self.assertEqual(self.build().returncode, 0)
         self.assertEqual((self.data / "features.yaml").read_bytes(), before)
-        self.assertEqual(sorted(p.name for p in self.data.iterdir()), ["build", "features.yaml"])
+        self.assertEqual(sorted(p.name for p in self.data.iterdir()), sorted(("build",) + SOURCES))
         self.assertEqual([p.name for p in (self.data / "build").iterdir()], ["ftm.db"])
 
 
 class RowLimit(Base):
     def test_truncated_result_is_marked(self):
-        self.write_features("".join(record(f"F{i:03d}") for i in range(250)))
+        ids = [f"F{i:03d}" for i in range(250)]
+        self.write_features("".join(record(i) for i in ids), leaves=ids)
         self.assertEqual(self.build().returncode, 0)
         result = self.sql("SELECT id FROM feature ORDER BY id")
         self.assertEqual(len(self.rows(result)), 200)
@@ -281,7 +324,8 @@ class RowLimit(Base):
         self.assertEqual(self.rows(self.sql("SELECT COUNT(*) FROM feature")), [["250"]])
 
     def test_exactly_at_limit_is_not_marked(self):
-        self.write_features("".join(record(f"F{i:03d}") for i in range(200)))
+        ids = [f"F{i:03d}" for i in range(200)]
+        self.write_features("".join(record(i) for i in ids), leaves=ids)
         self.assertEqual(self.build().returncode, 0)
         result = self.sql("SELECT id FROM feature")
         self.assertEqual(len(self.rows(result)), 200)
@@ -293,6 +337,9 @@ class Validation(Base):
 
     def assert_rejected(self, text, *expected):
         self.write_features(text)
+        return self.assert_build_fails(*expected)
+
+    def assert_build_fails(self, *expected):
         result = self.build()
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("데이터베이스를 만들지 않았다", result.stderr)
@@ -319,7 +366,7 @@ class Validation(Base):
         text = (
             "- id: 'NO'\n  name: '1.10'\n  path: '1.10'\n  parent_id: null\n  description: 설명이다.\n  ims_ref: '0100'\n"
         )
-        self.write_features(text)
+        self.write_features(text, leaves=["NO"])
         self.assertEqual(self.build().returncode, 0)
         self.assertEqual(self.rows(self.sql("SELECT id, name, ims_ref FROM feature")), [["NO", "1.10", "0100"]])
 
@@ -372,7 +419,7 @@ class Validation(Base):
     def test_record_order_is_free(self):
         """자식 항목이 부모 항목보다 먼저 적혀 있어도 변환된다(design/dp1.md)."""
         text = record("C", name="Child", path="Parent > Child", parent="P") + record("P", name="Parent")
-        self.write_features(text)
+        self.write_features(text, leaves=["C"])
         self.assertEqual(self.build().returncode, 0)
         self.assertEqual(self.rows(self.sql("SELECT id FROM v_leaf_feature")), [["C"]])
 
@@ -381,10 +428,202 @@ class Validation(Base):
             record("A", name="A") + record("B", name="B", path="A > B", parent="A")
             + record("C", name="C", path="A > B > C", parent="B") + record("D", name="D", path="A > D", parent="A")
         )
-        self.write_features(text)
+        self.write_features(text, leaves=["C", "D"])
         self.assertEqual(self.build().returncode, 0)
         rows = self.rows(self.sql("SELECT ancestor_id, feature_id FROM v_feature_subtree ORDER BY 1, 2"))
         self.assertEqual(rows, [["A", "C"], ["A", "D"], ["B", "C"], ["C", "C"], ["D", "D"]])
+
+
+class AggregateViews(Base):
+    """집계 뷰(design/dp5.md 3장)가 예시 데이터에서 내는 결과를 확인한다."""
+
+    def setUp(self):
+        super().setUp()
+        self.assertEqual(self.build().returncode, 0)
+
+    def test_scenario_tc_count(self):
+        rows = self.rows(self.sql("SELECT scenario_id, feature_id, tc_count FROM v_scenario_tc_count ORDER BY 1"))
+        self.assertEqual(rows, [
+            ["FLUSH-S1", "FLUSH", "3"],
+            ["FORMAT-S1", "FORMAT", "3"],
+            ["NS-CREATE-S1", "NS-CREATE", "3"],
+            ["NS-CREATE-S2", "NS-CREATE", "1"],
+            ["NS-DELETE-S1", "NS-DELETE", "2"],
+            ["PS-TRANSITION-S1", "PS-TRANSITION", "0"],
+            ["SANITIZE-S1", "SANITIZE", "3"],
+            ["SANITIZE-S2", "SANITIZE", "0"],
+            ["SPOR-S1", "SPOR", "4"],
+        ])
+
+    def test_feature_tc_count(self):
+        rows = self.rows(self.sql(
+            "SELECT feature_id, scenario_count, uncovered_scenario_count, tc_count FROM v_feature_tc_count ORDER BY 1"
+        ))
+        self.assertEqual(rows, [
+            ["FLUSH", "1", "0", "3"],
+            ["FORMAT", "1", "0", "3"],
+            ["NS-CREATE", "2", "0", "4"],
+            ["NS-DELETE", "1", "0", "2"],
+            ["PS-TRANSITION", "1", "1", "0"],
+            ["SANITIZE", "2", "1", "3"],
+            ["SPOR", "1", "0", "4"],
+        ])
+
+    def test_subtree_counts_shared_tc_once(self):
+        """두 기능을 함께 검증하는 TC는 묶음에서 한 번만 센다(4 + 2가 아니라 5)."""
+        rows = self.rows(self.sql(
+            "SELECT feature_id, leaf_count, uncovered_leaf_count, tc_count FROM v_subtree_tc_count "
+            "WHERE feature_id IN ('NS', 'NS-CREATE', 'NS-DELETE', 'PS-TRANSITION') ORDER BY 1"
+        ))
+        self.assertEqual(rows, [
+            ["NS", "2", "0", "5"],
+            ["NS-CREATE", "1", "0", "4"],
+            ["NS-DELETE", "1", "0", "2"],
+            ["PS-TRANSITION", "1", "1", "0"],
+        ])
+
+    def test_gaps(self):
+        self.assertEqual(
+            self.rows(self.sql("SELECT scenario_id FROM v_scenario_tc_count WHERE tc_count = 0 ORDER BY 1")),
+            [["PS-TRANSITION-S1"], ["SANITIZE-S2"]],
+        )
+        self.assertEqual(
+            self.rows(self.sql("SELECT feature_id FROM v_feature_tc_count WHERE tc_count = 0")),
+            [["PS-TRANSITION"]],
+        )
+
+    def test_feature_tc_and_unlinked_tc(self):
+        self.assertEqual(
+            self.rows(self.sql("SELECT COUNT(*), COUNT(DISTINCT tc_id) FROM v_feature_tc")), [["19", "17"]]
+        )
+        self.assertEqual(
+            self.rows(self.sql("SELECT feature_id FROM v_feature_tc WHERE tc_id = 17 ORDER BY 1")),
+            [["FLUSH"], ["SPOR"]],
+        )
+        self.assertEqual(self.rows(self.sql("SELECT id FROM v_unlinked_tc ORDER BY id")), [["18"], ["19"], ["20"]])
+
+
+class OtherSourceValidation(Base):
+    """인스턴스 시나리오, TC, 시나리오-TC 관계의 검증 규칙(design/dp4.md 4장)을 확인한다."""
+
+    def setUp(self):
+        super().setUp()
+        # 묶음 P 아래에 말단 A와 B가 있고, 각 말단에 시나리오가 하나씩 있는 최소 데이터.
+        self.features = (
+            record("P", name="P") + record("A", name="A", path="P > A", parent="P")
+            + record("B", name="B", path="P > B", parent="P")
+        )
+        self.write_features(self.features, leaves=["A", "B"])
+        self.good_scenarios = scenario("A-S1", "A") + scenario("B-S1", "B")
+
+    def fails(self, *expected, count=None):
+        result = self.build()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("데이터베이스를 만들지 않았다", result.stderr)
+        self.assertFalse(self.db.exists())
+        for fragment in expected:
+            self.assertIn(fragment, result.stderr)
+        if count is not None:
+            self.assertIn(f"오류 {count}개", result.stderr)
+        return result
+
+    def test_minimal_data_builds(self):
+        self.assertEqual(self.build().returncode, 0)
+        self.assertEqual(self.rows(self.sql("SELECT COUNT(*) FROM scenario")), [["2"]])
+
+    def test_leaf_without_scenario(self):
+        self.write("scenarios.yaml", scenario("A-S1", "A"))
+        self.fails("scenarios.yaml: [B] 말단 기능에 인스턴스 시나리오가 하나도 없다", count=1)
+
+    def test_scenario_on_bundle(self):
+        self.write("scenarios.yaml", self.good_scenarios + scenario("P-S1", "P"))
+        self.fails("scenarios.yaml: [P-S1] feature_id가 가리키는 기능 'P'는 자식 항목을 가지는 묶음이다", count=1)
+
+    def test_scenario_feature_missing(self):
+        self.write("scenarios.yaml", self.good_scenarios + scenario("X-S1", "X"))
+        self.fails("scenarios.yaml: [X-S1] feature_id가 가리키는 기능 'X'가 없다", count=1)
+
+    def test_scenario_id_format(self):
+        for bad in ("A-1", "B-S2", "A-S0", "A-S01", "A-S", "A-S1x", "S1"):
+            with self.subTest(id=bad):
+                self.write("scenarios.yaml", self.good_scenarios + scenario(bad, "A"))
+                self.fails(f"scenarios.yaml: [{bad}] id가 '<기능 ID>-S<번호>' 형식이 아니다")
+
+    def test_scenario_duplicate_id_and_keys(self):
+        self.write("scenarios.yaml", self.good_scenarios + scenario("A-S1", "A"))
+        self.fails("scenarios.yaml: [A-S1] id가 중복된다")
+        self.write("scenarios.yaml", self.good_scenarios.replace("  response: 응답이다.\n", "", 1))
+        self.fails("scenarios.yaml: [A-S1] 키 response가 없다")
+        self.write("scenarios.yaml", self.good_scenarios.replace("stimulus: 자극이다.", "stimulus: ''", 1))
+        self.fails("scenarios.yaml: [A-S1] stimulus의 값이 비어 있다")
+
+    def test_second_scenario_is_accepted(self):
+        self.write("scenarios.yaml", self.good_scenarios + scenario("A-S2", "A") + scenario("A-S10", "A"))
+        self.assertEqual(self.build().returncode, 0)
+        self.assertEqual(
+            self.rows(self.sql("SELECT scenario_count FROM v_feature_tc_count WHERE feature_id = 'A'")), [["3"]]
+        )
+
+    def test_scenario_errors_are_skipped_when_features_are_broken(self):
+        """기능 원본에 오류가 있으면, 기능을 참조하는 규칙의 오류를 덧붙이지 않는다."""
+        self.write("features.yaml", record("A") + record("A"))
+        self.fails("features.yaml: [A] id가 중복된다", count=1)
+
+    def test_tc_rules(self):
+        self.write("tcs.jsonl", jsonl(tc(1), tc(1, name="other"), tc(2, name="tc_1"), tc(0), tc(True), tc("3"), tc(4, suite="")) + "[1, 2]\nnot json\n")
+        result = self.fails(
+            "tcs.jsonl: [2번째 줄] id 1가 중복된다",
+            "tcs.jsonl: [3번째 줄] suite 'suite/a'와 name 'tc_1'의 조합이 중복된다",
+            "tcs.jsonl: [4번째 줄] id의 값 0은 1 이상의 정수가 아니다",
+            "tcs.jsonl: [5번째 줄] id의 값 True은 1 이상의 정수가 아니다",
+            "tcs.jsonl: [6번째 줄] id의 값 '3'은 1 이상의 정수가 아니다",
+            "tcs.jsonl: [7번째 줄] suite의 값이 비어 있다",
+            "tcs.jsonl: [8번째 줄] 한 줄이 JSON 객체 하나가 아니다",
+            "tcs.jsonl: [9번째 줄] JSON을 해석할 수 없다",
+            count=8,
+        )
+        self.assertNotIn("따옴표", result.stderr)
+
+    def test_tc_keys(self):
+        self.write("tcs.jsonl", '{"id": 1, "suite": "s", "name": "n"}\n{"id": 2, "suite": "s", "name": "m", "source_file": "f", "x": 1}\n{"id": 3, "id": 4, "suite": "s", "name": "k", "source_file": "f"}\n')
+        self.fails(
+            "tcs.jsonl: [1번째 줄] 키 source_file가 없다",
+            "tcs.jsonl: [2번째 줄] 정의되지 않은 키 'x'가 있다",
+            "tcs.jsonl: [3번째 줄] 키 'id'가 한 레코드 안에 두 번 나온다",
+            count=3,
+        )
+
+    def test_blank_lines_are_skipped(self):
+        self.write("tcs.jsonl", "\n" + jsonl(tc(1)) + "\n\n" + jsonl(tc(2)) + "\n")
+        self.write("scenario_tc.jsonl", "\n" + jsonl({"scenario_id": "A-S1", "tc_id": 2}))
+        self.assertEqual(self.build().returncode, 0)
+        self.assertEqual(self.rows(self.sql("SELECT COUNT(*) FROM tc")), [["2"]])
+        self.assertEqual(self.rows(self.sql("SELECT id FROM v_unlinked_tc")), [["1"]])
+
+    def test_relation_rules(self):
+        self.write("tcs.jsonl", jsonl(tc(1), tc(2)))
+        self.write("scenario_tc.jsonl", jsonl(
+            {"scenario_id": "A-S1", "tc_id": 1},
+            {"scenario_id": "A-S1", "tc_id": 1},
+            {"scenario_id": "A-S9", "tc_id": 1},
+            {"scenario_id": "B-S1", "tc_id": 7},
+            {"scenario_id": "B-S1", "tc_id": "2"},
+            {"scenario_id": "B-S1"},
+        ))
+        self.fails(
+            "scenario_tc.jsonl: [2번째 줄] scenario_id 'A-S1'와 tc_id 1의 조합이 중복된다",
+            "scenario_tc.jsonl: [3번째 줄] scenario_id가 가리키는 인스턴스 시나리오 'A-S9'가 없다",
+            "scenario_tc.jsonl: [4번째 줄] tc_id가 가리키는 TC 7가 없다",
+            "scenario_tc.jsonl: [5번째 줄] tc_id의 값 '2'은 정수가 아니다",
+            "scenario_tc.jsonl: [6번째 줄] 키 tc_id가 없다",
+            count=5,
+        )
+
+    def test_errors_in_all_files_are_reported_together(self):
+        self.write("scenarios.yaml", scenario("A-S1", "A"))
+        self.write("tcs.jsonl", jsonl(tc(1), tc(1, name="x")))
+        self.write("scenario_tc.jsonl", jsonl({"scenario_id": "A-S1", "tc_id": 1, "role": "x"}))
+        self.fails("scenarios.yaml: [B]", "tcs.jsonl: [2번째 줄]", "scenario_tc.jsonl: [1번째 줄]", count=3)
 
 
 class VendoredYaml(Base):

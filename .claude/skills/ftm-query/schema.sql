@@ -34,3 +34,69 @@ WITH RECURSIVE sub(ancestor_id, feature_id) AS (
 )
 SELECT sub.ancestor_id, sub.feature_id
 FROM sub JOIN v_leaf_feature l ON l.id = sub.feature_id;
+
+-- 인스턴스 시나리오 레코드(DP-7). 한 행이 인스턴스 시나리오 하나다.
+CREATE TABLE scenario (
+  id               TEXT PRIMARY KEY,
+  feature_id       TEXT NOT NULL REFERENCES feature(id),
+  stimulus         TEXT NOT NULL,
+  environment      TEXT NOT NULL,
+  response         TEXT NOT NULL,
+  response_measure TEXT NOT NULL
+);
+CREATE INDEX idx_scenario_feature_id ON scenario(feature_id);
+
+-- TC 레코드(DP-2). 한 행이 TC 하나다.
+CREATE TABLE tc (
+  id          INTEGER PRIMARY KEY,
+  suite       TEXT NOT NULL,
+  name        TEXT NOT NULL,
+  source_file TEXT NOT NULL,
+  UNIQUE (suite, name)
+);
+
+-- 시나리오-TC 관계 레코드(DP-3). 한 행이 'TC 하나가 인스턴스 시나리오 하나를 검증한다'는 연결 하나다.
+CREATE TABLE scenario_tc (
+  scenario_id TEXT    NOT NULL REFERENCES scenario(id),
+  tc_id       INTEGER NOT NULL REFERENCES tc(id),
+  PRIMARY KEY (scenario_id, tc_id)
+);
+CREATE INDEX idx_scenario_tc_tc_id ON scenario_tc(tc_id);
+
+-- (말단 기능, 그 기능을 검증하는 TC) 쌍. 중복이 없다.
+CREATE VIEW v_feature_tc AS
+SELECT DISTINCT s.feature_id, r.tc_id
+FROM scenario s JOIN scenario_tc r ON r.scenario_id = s.id;
+
+-- 인스턴스 시나리오별 TC 개수. tc_count가 0이면 인스턴스 시나리오 단위의 검증 공백이다.
+CREATE VIEW v_scenario_tc_count AS
+SELECT s.id AS scenario_id, s.feature_id, COUNT(r.tc_id) AS tc_count
+FROM scenario s LEFT JOIN scenario_tc r ON r.scenario_id = s.id
+GROUP BY s.id;
+
+-- 말단 기능별 집계. tc_count가 0이면 검증되지 않은 기능이다. 같은 TC는 한 번만 센다.
+CREATE VIEW v_feature_tc_count AS
+SELECT l.id AS feature_id,
+  (SELECT COUNT(*) FROM scenario s WHERE s.feature_id = l.id) AS scenario_count,
+  (SELECT COUNT(*) FROM v_scenario_tc_count c
+    WHERE c.feature_id = l.id AND c.tc_count = 0) AS uncovered_scenario_count,
+  (SELECT COUNT(*) FROM v_feature_tc ft WHERE ft.feature_id = l.id) AS tc_count
+FROM v_leaf_feature l;
+
+-- 기능별 하위 트리 집계. 묶음 기능과 말단 기능을 모두 포함한다. 같은 TC는 한 번만 센다.
+CREATE VIEW v_subtree_tc_count AS
+SELECT f.id AS feature_id,
+  (SELECT COUNT(*) FROM v_feature_subtree st WHERE st.ancestor_id = f.id) AS leaf_count,
+  (SELECT COUNT(*) FROM v_feature_subtree st
+    WHERE st.ancestor_id = f.id
+      AND NOT EXISTS (SELECT 1 FROM v_feature_tc ft WHERE ft.feature_id = st.feature_id)) AS uncovered_leaf_count,
+  (SELECT COUNT(DISTINCT ft.tc_id) FROM v_feature_subtree st
+    JOIN v_feature_tc ft ON ft.feature_id = st.feature_id
+    WHERE st.ancestor_id = f.id) AS tc_count
+FROM feature f;
+
+-- 어느 인스턴스 시나리오에도 연결되지 않은 TC.
+CREATE VIEW v_unlinked_tc AS
+SELECT t.*
+FROM tc t
+WHERE NOT EXISTS (SELECT 1 FROM scenario_tc r WHERE r.tc_id = t.id);
