@@ -28,6 +28,12 @@
 | 자연어 설명 | `description` | TEXT |
 | IMS 원본 위치 | `ims_ref` | TEXT |
 
+`description`과 `ims_ref`에 적는 값은 다음과 같다. 근거와 검토한 대안은 `DESIGN.md`의 DP-1에 있다.
+
+- `ims_ref`에는 IMS 항목의 key를 적는다. URL은 적지 않으며, URL이 필요한 곳에서는 IMS의 기준 주소와 key를 조합하여 만든다.
+- `description`은 `ims_ref`가 가리키는 항목의 본문, 그 항목에 속한 task, 그 항목에 달린 comment만을 근거로 작성한다. comment는 본문과 task로 기능의 동작과 조건을 알 수 없는 경우에만 사용한다. 근거를 기록하는 항목은 따로 두지 않는다.
+- task는 작업 단위이므로 기능 레코드로 옮기지 않는다. 따라서 `parent_id`가 task와 epic의 관계를 나타내는 경우는 없다.
+
 테이블 이름은 `feature`로 한다. 에이전트가 `feature.id`와 같이 '테이블 이름.열 이름'으로 읽을 때 자연스럽도록 단수형으로 둔다.
 
 ## 2. 테이블 정의
