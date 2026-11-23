@@ -2,13 +2,17 @@
 """변환 명령: 원본 네 파일에서 조회용 SQLite 데이터베이스를 만든다.
 
 사용자가 실행한다. 에이전트와 조회 스크립트는 이 명령을 실행하지 않는다.
-데이터 폴더는 환경 변수 FTM_DATA_DIR로 전달받는다.
+데이터 폴더는 --data-dir 인자나 환경 변수 FTM_DATA_DIR로 전달받는다. 인자가 있으면 인자가 앞선다.
+
+  build.py [--data-dir <폴더>]       네 원본을 검사하고 데이터베이스를 만든다.
+  build.py --check-features <파일>   기능 원본 하나만 검사한다. 데이터베이스를 만들지 않는다.
 """
 
 import sys
 
 sys.dont_write_bytecode = True
 
+import argparse
 import datetime
 import json
 import os
@@ -400,9 +404,39 @@ def build_database(tables, data_dir, source_hash, schema_hash):
     return target, built_at
 
 
+def check_features(path):
+    """기능 원본 하나만 검사한다. 다른 원본이 아직 없을 때 쓴다."""
+    if not os.path.isfile(path):
+        print(f"오류: 파일이 없다: {path}", file=sys.stderr)
+        return 2
+    data, errors = read_yaml(path)
+    records = []
+    if not errors:
+        records, errors = validate_features(data)
+    if errors:
+        print(f"오류: {path}에서 오류 {len(errors)}개를 발견하였다.", file=sys.stderr)
+        for message in errors:
+            print(f"- {message}", file=sys.stderr)
+        return 1
+    parents = {rec["parent_id"] for rec in records if rec["parent_id"] is not None}
+    leaves = sum(1 for rec in records if rec["id"] not in parents)
+    print(f"기능 원본에서 오류를 발견하지 못하였다: {path}")
+    print(f"기능 레코드: {len(records)}개 (묶음 {len(records) - leaves}개, 검증 대상 {leaves}개)")
+    print("인스턴스 시나리오, TC, 시나리오-TC 관계와 맞는지는 검사하지 않았다.")
+    return 0
+
+
 def main():
+    common.configure_output()
+    parser = argparse.ArgumentParser(description="Feature-Test Map 변환 명령")
+    parser.add_argument("--data-dir", help="데이터 폴더의 경로. 없으면 환경 변수 FTM_DATA_DIR을 쓴다.")
+    parser.add_argument("--check-features", metavar="FILE", help="기능 원본 하나만 검사하고 데이터베이스를 만들지 않는다.")
+    args = parser.parse_args()
+    if args.check_features:
+        return check_features(args.check_features)
+
     try:
-        data_dir = common.resolve_data_dir()
+        data_dir = common.resolve_data_dir(args.data_dir)
         source_hash = common.source_hash(data_dir)
         schema_hash = common.schema_hash()
 

@@ -9,7 +9,7 @@ Feature-Test Map의 데이터를 조회하여 질의에 답하는 절차다. 데
 
 ## 명령
 
-아래에서 `<skill>`은 이 `SKILL.md`가 있는 폴더의 경로다.
+아래에서 `<skill>`은 이 `SKILL.md`가 있는 폴더의 경로다. `python3`이 없는 환경(Windows 등)에서는 `python`으로 실행한다.
 
 | 명령 | 동작 |
 |---|---|
@@ -41,8 +41,10 @@ Feature-Test Map의 데이터를 조회하여 질의에 답하는 절차다. 데
 사용자가 검증 공백을 화면이나 보고서로 보여 달라고 하면, 보고서 명령을 실행하지 않고 아래의 실행 줄을 안내한다. `<데이터 폴더>`에는 `schema` 명령의 출력에 있는 데이터 폴더의 절대 경로를, `<skill>`에는 이 폴더의 절대 경로를 넣는다. 보고서는 데이터 폴더의 `build/report.html`에 만들어지며, 브라우저로 연다.
 
 ```
-FTM_DATA_DIR=<데이터 폴더> python3 <skill>/report/report.py
+python3 <skill>/report/report.py --data-dir "<데이터 폴더>"
 ```
+
+Windows에서는 경로의 구분 문자를 `/`로 적고 `python3` 대신 `python`을 적는다. 조회 스크립트의 오류 메시지에 있는 실행 줄이 같은 표기를 쓴다.
 
 ## 스키마
 

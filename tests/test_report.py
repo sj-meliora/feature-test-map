@@ -12,7 +12,7 @@ import json
 import re
 import shutil
 
-from test_ftm_query import Base, SKILL, record
+from test_ftm_query import Base, SKILL, record, shown
 
 
 def embedded_data(html):
@@ -85,7 +85,7 @@ class Report(Base):
         result = self.make()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("데이터베이스가 아직 만들어지지 않았다", result.stderr)
-        self.assertIn(str(SKILL / "scripts" / "build.py"), result.stderr.rstrip().splitlines()[-1])
+        self.assertIn(shown(SKILL / "scripts" / "build.py"), result.stderr.rstrip().splitlines()[-1])
         self.assertFalse(self.report.parent.exists(), "보고서 명령은 데이터베이스를 만들지 않는다")
 
         old = self.built()
@@ -121,6 +121,12 @@ class Report(Base):
             self.assertIn(fragment, html)
         ids = re.findall(r'\bid="([^"]+)"', html)
         self.assertEqual(len(ids), len(set(ids)), "요소의 id가 겹치지 않는다")
+
+    def test_data_dir_argument(self):
+        self.assertEqual(self.build().returncode, 0)
+        result = self.run_script("../report/report.py", "--data-dir", str(self.data), env_value=None)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.report.is_file())
 
     def test_env_not_set(self):
         result = self.run_script("../report/report.py", env_value=None)

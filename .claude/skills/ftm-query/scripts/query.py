@@ -89,6 +89,7 @@ def cmd_sql(conn, statement):
 
 
 def main():
+    common.configure_output()
     parser = argparse.ArgumentParser(description="Feature-Test Map 조회 스크립트 (읽기 전용)")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("schema", help="데이터 폴더의 경로와 테이블, 뷰의 정의를 출력한다")
