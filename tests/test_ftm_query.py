@@ -24,6 +24,16 @@ SOURCES = ("features.yaml", "scenarios.yaml", "tcs.jsonl", "scenario_tc.jsonl")
 HEADER = "- id: {id}\n  name: {name}\n  path: {path}\n  parent_id: {parent}\n  description: 설명이다.\n  ims_ref: REF-{id}\n"
 
 
+def shown(path):
+    """실행 줄에 경로가 적히는 표기. Windows에서는 구분 문자를 '/'로 적는다."""
+    return Path(path).as_posix() if os.name == "nt" else str(path)
+
+
+def run_line(line, env=None):
+    """오류 메시지의 실행 줄을 셸에서 그대로 실행한다."""
+    return subprocess.run(line, shell=True, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
+
+
 def record(id, name=None, path=None, parent="null"):
     name = name or f"Name {id}"
     return HEADER.format(id=id, name=name, path=path or name, parent=parent)
@@ -47,7 +57,7 @@ def tc(id, suite="suite/a", name=None, source_file="test.py"):
 
 class Base(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="ftm-test-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="ftm-test-")).resolve()
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.data = self.tmp / "data"
         self.data.mkdir()
@@ -94,7 +104,7 @@ class Base(unittest.TestCase):
 
     def snapshot(self, root):
         return {
-            str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
+            p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
             for p in sorted(root.rglob("*")) if p.is_file()
         }
 
@@ -206,13 +216,15 @@ class Freshness(Base):
     def test_database_missing(self):
         line = self.assert_stale(self.query("schema"), "데이터베이스가 아직 만들어지지 않았다")
         self.assertFalse(self.db.exists(), "조회 스크립트는 데이터베이스를 만들지 않는다")
-        self.assertIn(str(SKILL / "scripts" / "build.py"), line)
+        self.assertIn(shown(SKILL / "scripts" / "build.py"), line)
+        self.assertIn(shown(self.data.resolve()), line)
+        self.assertNotIn("FTM_DATA_DIR=", line, "환경 변수를 줄 앞에 붙이는 표기는 셸마다 달라서 쓰지 않는다")
 
     def test_command_line_resolves_the_error(self):
         """오류 메시지의 실행 줄을 환경 변수 없이 그대로 실행하면 오류가 해소된다."""
         line = self.assert_stale(self.sql("SELECT 1"), "아직 만들어지지 않았다")
         env = {k: v for k, v in os.environ.items() if k != "FTM_DATA_DIR"}
-        done = subprocess.run(line, shell=True, capture_output=True, text=True, env=env)
+        done = run_line(line, env=env)
         self.assertEqual(done.returncode, 0, done.stderr)
         self.assertEqual(self.rows(self.sql("SELECT COUNT(*) FROM feature")), [["8"]])
 
@@ -238,13 +250,13 @@ class Freshness(Base):
         self.assertIn("플러그인을 먼저 다시 설치한다", result.stderr)
 
         # 실행 줄은 저장소가 아니라 설치된 사본의 변환 명령을 가리킨다.
-        self.assertIn(str(installed.resolve() / "scripts" / "build.py"), line)
-        self.assertNotIn(str(SKILL), line)
+        self.assertIn(shown(installed.resolve() / "scripts" / "build.py"), line)
+        self.assertNotIn(shown(SKILL), line)
 
         # 저장소의 변환 명령을 다시 실행해도 해소되지 않고, 실행 줄을 따르면 해소된다.
         self.assertEqual(self.build().returncode, 0)
         self.assertNotEqual(self.query("schema", skill=installed).returncode, 0)
-        done = subprocess.run(line, shell=True, capture_output=True, text=True)
+        done = run_line(line)
         self.assertEqual(done.returncode, 0, done.stderr)
         self.assertEqual(self.query("schema", skill=installed).returncode, 0)
         # 이제 저장소의 조회 스크립트 쪽에서 정의가 다르다.
@@ -258,6 +270,114 @@ class Freshness(Base):
         conn.commit()
         conn.close()
         self.assert_stale(self.query("schema"), "생성 정보를 읽을 수 없다")
+
+
+class CommandLine(unittest.TestCase):
+    """실행 줄의 표기(design/dp6.md 2장). Windows의 표기도 어느 환경에서나 확인한다."""
+
+    def setUp(self):
+        sys.path.insert(0, str(SKILL / "scripts"))
+        self.addCleanup(sys.path.remove, str(SKILL / "scripts"))
+        import common
+        self.common = common
+
+    def test_windows_form(self):
+        line = self.common.command_line(
+            r"C:\tools\ftm-query\scripts\build.py", r"D:\data\ftm", windows=True,
+            executable=r"C:\Python313\python.exe",
+        )
+        self.assertEqual(line, 'C:/Python313/python.exe "C:/tools/ftm-query/scripts/build.py" --data-dir "D:/data/ftm"')
+
+    def test_windows_form_avoids_quoting_the_program(self):
+        """실행 파일의 경로에 공백이 있으면 경로 대신 이름만 적는다. 따옴표로 시작하는 줄은 PowerShell에서 실행되지 않는다."""
+        line = self.common.command_line(
+            r"C:\tools\build.py", r"D:\my data", windows=True,
+            executable=r"C:\Program Files\Python313\python.exe",
+        )
+        self.assertEqual(line, 'python "C:/tools/build.py" --data-dir "D:/my data"')
+        self.assertFalse(line.startswith('"'))
+
+    def test_windows_form_has_no_backslash_or_single_quote(self):
+        line = self.common.command_line(r"C:\a\build.py", r"C:\b", windows=True, executable=r"C:\py\python.exe")
+        self.assertNotIn("\\", line)
+        self.assertNotIn("'", line)
+        self.assertNotIn("FTM_DATA_DIR", line)
+
+    def test_posix_form(self):
+        line = self.common.command_line("/opt/ftm/build.py", "/data/my data", windows=False, executable="/usr/bin/python3")
+        self.assertEqual(line, "/usr/bin/python3 /opt/ftm/build.py --data-dir '/data/my data'")
+
+
+class DataDirArgument(Base):
+    """변환 명령은 --data-dir 인자로도 데이터 폴더를 받는다."""
+
+    def test_argument_without_environment(self):
+        result = self.run_script("build.py", "--data-dir", str(self.data), env_value=None)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.db.is_file())
+
+    def test_argument_wins_over_environment(self):
+        other = self.tmp / "other"
+        other.mkdir()
+        result = self.run_script("build.py", "--data-dir", str(self.data), env_value=str(other))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.db.is_file())
+        self.assertFalse((other / "build").exists())
+
+    def test_argument_points_to_missing_folder(self):
+        result = self.run_script("build.py", "--data-dir", str(self.tmp / "nowhere"), env_value=None)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("--data-dir이 가리키는 폴더가 없다", result.stderr)
+
+
+class CheckFeatures(Base):
+    """기능 원본 하나만 검사하는 --check-features. 환경 변수와 다른 원본이 없어도 동작한다."""
+
+    def check(self, path):
+        return self.run_script("build.py", "--check-features", str(path), env_value=None)
+
+    def test_valid_file(self):
+        result = self.check(EXAMPLES / "features.yaml")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("기능 레코드: 8개 (묶음 1개, 검증 대상 7개)", result.stdout)
+        self.assertFalse(self.db.exists())
+
+    def test_file_alone_in_a_folder(self):
+        alone = self.tmp / "alone"
+        alone.mkdir()
+        shutil.copy(EXAMPLES / "features.yaml", alone / "draft.yaml")
+        result = self.check(alone / "draft.yaml")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual([p.name for p in alone.iterdir()], ["draft.yaml"])
+
+    def test_errors_are_reported(self):
+        draft = self.tmp / "draft.yaml"
+        draft.write_text(
+            "- id: NO\n  name: A\n  path: B\n  parent_id: null\n  description: 설명이다.\n", encoding="utf-8"
+        )
+        result = self.check(draft)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("오류 2개", result.stderr)
+        self.assertIn("키 ims_ref가 없다", result.stderr)
+        self.assertIn("따옴표로 감싼다", result.stderr)
+
+    def test_missing_file(self):
+        result = self.check(self.tmp / "none.yaml")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("파일이 없다", result.stderr)
+
+
+class Output(Base):
+    def test_piped_output_is_utf8_regardless_of_locale(self):
+        """출력이 다른 프로그램으로 넘어갈 때에는 환경의 기본 인코딩과 무관하게 UTF-8로 쓴다."""
+        env = {k: v for k, v in os.environ.items() if k not in ("FTM_DATA_DIR", "PYTHONIOENCODING", "PYTHONUTF8")}
+        env.update(LC_ALL="C", LANG="C", PYTHONCOERCECLOCALE="0")
+        result = subprocess.run(
+            [sys.executable, "-X", "utf8=0", str(SKILL / "scripts" / "query.py"), "schema"],
+            capture_output=True, env=env,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("FTM_DATA_DIR이 설정되지 않았다", result.stderr.decode("utf-8"))
 
 
 class ReadOnly(Base):

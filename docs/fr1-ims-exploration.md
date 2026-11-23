@@ -165,23 +165,13 @@ C-2의 답이 `ims_ref`에 적을 값과 `id`를 부여하는 방법의 근거�
 
 ### 시범 변환의 검사
 
-변환 명령은 네 원본 파일이 모두 있어야 동작하므로, 기능 원본만 있는 상태에서는 사용할 수 없다. 기능 원본만 검사하려면 저장소 최상위에서 다음을 실행한다. `<파일 경로>`에는 시범 변환한 파일의 경로를 넣는다.
+변환 명령은 네 원본 파일이 모두 있어야 데이터베이스를 만들므로, 기능 원본만 있는 상태에서는 변환할 수 없다. 기능 원본만 검사하려면 저장소 최상위에서 변환 명령에 `--check-features`를 주어 실행한다. `<파일 경로>`에는 시범 변환한 파일의 경로를 넣는다. `python3`이 없는 환경(Windows 등)에서는 `python`으로 실행한다.
 
 ```bash
-python3 - "<파일 경로>" <<'EOF'
-import sys
-sys.dont_write_bytecode = True
-sys.path.insert(0, ".claude/skills/ftm-query/scripts")
-import build
-data, errors = build.read_yaml(sys.argv[1])
-records, more = build.validate_features(data) if not errors else ([], [])
-for message in errors + more:
-    print("-", message)
-print("기능 레코드", len(records), "개, 오류", len(errors + more), "개")
-EOF
+python3 .claude/skills/ftm-query/scripts/build.py --check-features "<파일 경로>"
 ```
 
-이 방법은 변환 명령의 내부 함수를 직접 부르는 임시 수단이며, 데이터베이스를 만들지 않는다. `examples/features.yaml`에 실행하면 '기능 레코드 8 개, 오류 0 개'가 출력된다.
+이 명령은 3장의 검증 규칙으로 그 파일만 검사하며, 데이터베이스를 만들지 않고 환경 변수의 지정도 필요하지 않다. `examples/features.yaml`에 실행하면 '기능 레코드: 8개 (묶음 1개, 검증 대상 7개)'가 출력된다.
 
 ## 6. 지켜야 할 것
 
