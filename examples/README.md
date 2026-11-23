@@ -50,6 +50,12 @@ TC의 suite, 이름, 소스 코드 이름은 지어낸 값이며, 가리키는 �
    - namespace 관련 기능을 검증하는 TC는 몇 개인가?
    - Sanitize는 어떤 기능인가?
 
+4. 검증 공백 보고서를 만든다. `examples/build/report.html`이 만들어지며, 브라우저로 연다.
+
+   ```bash
+   python3 .claude/skills/ftm-query/report/report.py
+   ```
+
 에이전트 없이 조회 스크립트를 직접 실행할 수도 있다.
 
 ```bash
@@ -60,4 +66,4 @@ python3 .claude/skills/ftm-query/scripts/query.py schema
 python3 .claude/skills/ftm-query/scripts/query.py sql "SELECT * FROM v_feature_tc_count"
 ```
 
-원본 파일을 고친 뒤에는 2번의 변환 명령을 다시 실행한다. 다시 실행하지 않으면 조회 스크립트가 오류로 종료하고 실행할 명령을 안내한다.
+원본 파일을 고친 뒤에는 2번의 변환 명령과 4번의 보고서 명령을 다시 실행한다. 변환 명령을 다시 실행하지 않으면 조회 스크립트와 보고서 명령이 오류로 종료하고 실행할 명령을 안내한다.

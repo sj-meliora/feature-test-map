@@ -20,64 +20,6 @@ import common
 
 ROW_LIMIT = 200
 
-_ALLOWED_ACTIONS = {
-    sqlite3.SQLITE_SELECT,
-    sqlite3.SQLITE_READ,
-    sqlite3.SQLITE_FUNCTION,
-    getattr(sqlite3, "SQLITE_RECURSIVE", 33),
-}
-
-
-def _authorizer(action, arg1, arg2, db_name, source):
-    return sqlite3.SQLITE_OK if action in _ALLOWED_ACTIONS else sqlite3.SQLITE_DENY
-
-
-def _stale(reason, data_dir, extra=None):
-    lines = [
-        reason,
-        f"데이터 폴더: {data_dir}",
-        f"데이터베이스: {common.db_path(data_dir)}",
-        "아래의 명령을 실행하여 데이터베이스를 만든다.",
-    ]
-    if extra:
-        lines.append(extra)
-    lines += ["", f"  {common.build_command_line(data_dir)}"]
-    return common.FtmError("\n".join(lines))
-
-
-def open_checked(data_dir):
-    """최신성을 검사한 뒤, 읽기 전용으로 연 연결과 생성 정보를 돌려준다."""
-    source_hash = common.source_hash(data_dir)
-    schema_hash = common.schema_hash()
-    path = common.db_path(data_dir)
-    if not path.is_file():
-        raise _stale("데이터베이스가 아직 만들어지지 않았다.", data_dir)
-
-    conn = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)
-    try:
-        conn.execute("PRAGMA query_only = ON")
-        try:
-            info = dict(conn.execute("SELECT key, value FROM build_info"))
-        except sqlite3.Error:
-            raise _stale("데이터베이스에서 생성 정보를 읽을 수 없다.", data_dir)
-
-        reasons = []
-        extra = None
-        if info.get("source_hash") != source_hash:
-            reasons.append("원본이 데이터베이스를 만든 뒤에 바뀌었다.")
-        if info.get("schema_hash") != schema_hash:
-            reasons.append("데이터베이스가 이 스킬의 정의와 다른 정의로 만들어졌다.")
-            extra = "저장소에서 정의를 고쳤다면 플러그인을 먼저 다시 설치한다."
-        if reasons:
-            raise _stale(" ".join(reasons), data_dir, extra)
-
-        conn.set_authorizer(_authorizer)
-    except BaseException:
-        conn.close()
-        raise
-    return conn, info
-
-
 def _cell(value):
     if value is None:
         return "NULL"
@@ -156,7 +98,7 @@ def main():
 
     try:
         data_dir = common.resolve_data_dir()
-        conn, info = open_checked(data_dir)
+        conn, info = common.open_checked(data_dir)
     except common.FtmError as e:
         print(f"오류: {e}", file=sys.stderr)
         return 2
