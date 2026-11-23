@@ -1,0 +1,470 @@
+<title>FTM 검증 공백 보고서</title>
+<style>
+/* 배치: 위에서 아래로 요약 수치 세 개, 걸러 보기, 기능 표(행을 펼치면 시나리오, 다시 펼치면 TC), 연결되지 않은 TC. */
+:root {
+  --bg: #f4f5f8;
+  --surface: #ffffff;
+  --sunken: #eef0f4;
+  --ink: #1a2230;
+  --body: #36404f;
+  --muted: #5f6b7c;
+  --line: #dce0e7;
+  --accent: #2553c4;
+  --accent-soft: #e6ecfa;
+  --crit: #a8231c;
+  --crit-soft: #fae9e7;
+  --warn: #7d5200;
+  --warn-soft: #faefd6;
+  --ok: #2c6a4a;
+  --sans: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "D2Coding", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11141a; --surface: #191e26; --sunken: #141820; --ink: #e8ebf0; --body: #c6ccd6; --muted: #98a2b1;
+    --line: #2a313c; --accent: #86abff; --accent-soft: #1d2a47; --crit: #ff8f85; --crit-soft: #3a1c1a;
+    --warn: #efc266; --warn-soft: #372c12; --ok: #7fc79d; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11141a; --surface: #191e26; --sunken: #141820; --ink: #e8ebf0; --body: #c6ccd6; --muted: #98a2b1;
+  --line: #2a313c; --accent: #86abff; --accent-soft: #1d2a47; --crit: #ff8f85; --crit-soft: #3a1c1a;
+  --warn: #efc266; --warn-soft: #372c12; --ok: #7fc79d; color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--body); font-family: var(--sans); font-size: 14px; line-height: 1.55;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 22px; }
+.wrap > * { min-width: 0; }
+h1, h2, p { margin: 0; }
+h1 { font-size: 22px; line-height: 1.3; color: var(--ink); letter-spacing: -0.01em; text-wrap: balance; }
+h2 { font-size: 15px; color: var(--ink); }
+code, .id { font-family: var(--mono); font-size: 0.92em; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+header { display: grid; gap: 6px; }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 18px; color: var(--muted); font-size: 12.5px; }
+.meta b { font-weight: 500; color: var(--body); }
+.meta .path { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 8px; }
+.stat .label { font-size: 12.5px; color: var(--muted); }
+.stat .fig { display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; }
+.stat .n { font-size: 30px; line-height: 1; font-weight: 700; color: var(--ink); }
+.stat.has-gap .n { color: var(--crit); }
+.stat .of { color: var(--muted); font-size: 13px; }
+.bar { height: 6px; border-radius: 3px; background: var(--sunken); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--crit); border-radius: 3px; }
+.stat:not(.has-gap) .bar i { background: var(--ok); }
+
+.tools { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: transparent; padding: 7px 13px; cursor: pointer; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.search { flex: 1 1 220px; min-width: 0; max-width: 340px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); padding: 7px 11px; }
+.link { border: 0; background: transparent; color: var(--accent); cursor: pointer; padding: 6px 2px; }
+.link:hover { text-decoration: underline; }
+.shown { margin-left: auto; color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; }
+table.ft { min-width: 620px; }
+th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); padding: 9px 14px; border-bottom: 1px solid var(--line); background: var(--sunken); white-space: nowrap; }
+td { padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tbody tr:last-child > td { border-bottom: 0; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+th.num { text-align: right; }
+
+tr.g > td { background: var(--sunken); color: var(--muted); font-size: 13px; }
+tr.g .nm { color: var(--ink); font-weight: 600; }
+tr.f.open > td { border-bottom-color: transparent; }
+.feat { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.feat.d1 { padding-left: 22px; }
+.feat.d2 { padding-left: 44px; }
+.feat.d3 { padding-left: 66px; }
+.tg { flex: none; width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); cursor: pointer; display: grid; place-items: center; color: var(--muted); }
+.tg::before { content: ""; width: 6px; height: 6px; border-right: 1.6px solid currentColor; border-bottom: 1.6px solid currentColor; transform: translate(-1px, 0) rotate(-45deg); }
+.tg[aria-expanded="true"]::before { transform: translate(0, -1px) rotate(45deg); }
+.tg:hover { color: var(--accent); border-color: var(--accent); }
+.nm { color: var(--ink); font-weight: 500; }
+.feat .id, .sid { color: var(--muted); }
+.spacer { flex: none; width: 24px; }
+
+/* 시나리오마다 네모 하나. 채워진 네모는 TC가 있는 시나리오, 빈 네모는 TC가 없는 시나리오다. */
+.dots { display: inline-flex; gap: 3px; vertical-align: middle; margin-right: 8px; }
+.dots i { width: 9px; height: 9px; border-radius: 2px; background: var(--ok); }
+.dots i.none { background: transparent; box-shadow: inset 0 0 0 1.6px var(--crit); }
+
+.pill { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.pill.crit { background: var(--crit-soft); color: var(--crit); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.quiet { color: var(--muted); font-size: 12.5px; }
+
+tr.d > td { padding: 0 14px 16px; background: var(--surface); }
+.detail { margin-left: 32px; display: grid; gap: 12px; }
+.desc { color: var(--body); max-width: 78ch; }
+.kv { display: flex; flex-wrap: wrap; gap: 2px 18px; color: var(--muted); font-size: 12.5px; }
+.sc { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.sc.none { border-color: var(--crit); }
+.sc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 9px 12px; background: var(--sunken); }
+.sc.none .sc-head { background: var(--crit-soft); }
+.sc-head .sid { color: var(--ink); font-weight: 600; }
+.sc-head .link { margin-left: auto; padding: 0; }
+/* 시나리오 골격의 네 단계를 왼쪽에서 오른쪽으로 놓는다. */
+.stages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.stage { padding: 10px 12px; border-left: 1px solid var(--line); display: grid; gap: 3px; align-content: start; }
+.stage:first-child { border-left: 0; }
+.stage dt { font-size: 11.5px; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
+.stage dd { margin: 0; font-size: 13px; }
+dl { margin: 0; }
+.tcs { border-top: 1px solid var(--line); max-height: 320px; overflow: auto; }
+.tcs table { font-size: 13px; min-width: 520px; }
+.tcs th { position: sticky; top: 0; }
+.tcs td, .tcs th, .un td, .un th { padding: 6px 12px; }
+.also { display: inline-block; margin-left: 8px; border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.un .scroll { max-height: 360px; overflow: auto; }
+.un table { font-size: 13px; min-width: 520px; }
+.un th { position: sticky; top: 0; }
+.sec-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.sec-head p { color: var(--muted); font-size: 12.5px; }
+.empty { padding: 22px 16px; color: var(--muted); text-align: center; }
+.legend { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 24px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--line); padding-top: 16px; }
+.legend b { color: var(--body); font-weight: 600; }
+.sect { display: grid; gap: 10px; }
+
+@media (max-width: 720px) {
+  .stats { grid-template-columns: minmax(0, 1fr); }
+  .stages { grid-template-columns: minmax(0, 1fr); }
+  .stage { border-left: 0; border-top: 1px solid var(--line); }
+  .stage:first-child { border-top: 0; }
+  .detail { margin-left: 0; }
+  .legend { grid-template-columns: minmax(0, 1fr); }
+  .shown { margin-left: 0; }
+  /* 좁은 화면에서는 기능 표의 한 행을 여러 줄로 접어, 옆으로 밀지 않고 읽게 한다. */
+  table.ft { min-width: 0; display: block; }
+  .ft thead { display: none; }
+  .ft tbody { display: block; }
+  .ft tr { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .ft tbody tr:last-child { border-bottom: 0; }
+  .ft td { display: block; padding: 0; border: 0; }
+  .ft td:first-child { flex: 1 1 100%; min-width: 0; }
+  .ft td.num::before { content: "TC "; color: var(--muted); }
+  .ft tr.g { background: var(--sunken); }
+  .ft tr.f.open { border-bottom: 0; padding-bottom: 6px; }
+  .ft tr.d { display: block; padding: 0 12px 14px; }
+  .ft tr.d > td { padding: 0; }
+  .feat { flex-wrap: wrap; }
+  .feat.d1 { padding-left: 14px; }
+  .feat.d2 { padding-left: 28px; }
+  .feat.d3 { padding-left: 42px; }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>검증 공백 보고서</h1>
+    <div class="meta" id="meta"></div>
+  </header>
+
+  <section class="stats" id="stats" aria-label="요약"></section>
+
+  <section class="sect">
+    <div class="tools">
+      <div class="seg" role="group" aria-label="걸러 보기">
+        <button type="button" id="f-all" aria-pressed="true">전체</button>
+        <button type="button" id="f-gap" aria-pressed="false">공백이 있는 기능만</button>
+      </div>
+      <input class="search" id="q" type="search" placeholder="기능, 시나리오, TC 이름으로 찾기" aria-label="찾기">
+      <button type="button" class="link" id="open-all">모두 펼치기</button>
+      <button type="button" class="link" id="close-all">모두 접기</button>
+      <span class="shown" id="shown"></span>
+    </div>
+    <div class="panel">
+      <div class="scroll">
+        <table class="ft">
+          <thead>
+            <tr><th>기능</th><th>인스턴스 시나리오</th><th class="num">TC</th><th>검증 공백</th></tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="none" hidden>조건에 맞는 기능이 없다.</div>
+    </div>
+  </section>
+
+  <section class="sect un">
+    <div class="sec-head">
+      <h2 id="un-title">연결되지 않은 TC</h2>
+      <p>어느 인스턴스 시나리오에도 연결되지 않은 TC다. 검증하는 기능이 목록에 없거나, 관계를 아직 식별하지 않은 경우다.</p>
+    </div>
+    <div class="panel">
+      <div class="scroll">
+        <table>
+          <thead><tr><th class="num">ID</th><th>suite</th><th>TC 이름</th><th>소스 코드 이름</th></tr></thead>
+          <tbody id="unlinked"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="un-none" hidden>연결되지 않은 TC가 없다.</div>
+    </div>
+  </section>
+
+  <div class="legend">
+    <p><b>검증되지 않은 기능</b><br>인스턴스 시나리오에 연결된 TC가 하나도 없는 말단 기능이다.</p>
+    <p><b>TC가 없는 시나리오</b><br>기능에는 TC가 있더라도, 그 인스턴스 시나리오에는 TC가 연결되지 않은 경우다.</p>
+    <p><b>TC의 개수</b><br>같은 TC는 한 번만 센다. 묶음 기능의 개수는 하위 기능의 TC를 모아 중복 없이 센 값이다.</p>
+  </div>
+</div>
+
+<script type="application/json" id="ftm-data">/*__DATA__*/</script>
+<script>
+(function () {
+  "use strict";
+  var D = JSON.parse(document.getElementById("ftm-data").textContent);
+  var $ = function (id) { return document.getElementById(id); };
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = text;
+    return e;
+  }
+
+  var scenariosOf = {};
+  D.scenarios.forEach(function (s) { (scenariosOf[s.feature_id] = scenariosOf[s.feature_id] || []).push(s); });
+  var tcById = {};
+  D.tcs.forEach(function (t) { tcById[t.id] = t; });
+  var featureById = {};
+  D.features.forEach(function (f) { featureById[f.id] = f; });
+
+  // 찾기에 쓰는 문자열. 기능마다 한 번만 만든다.
+  D.features.forEach(function (f) {
+    var parts = [f.id, f.name, f.description, f.ims_ref];
+    (scenariosOf[f.id] || []).forEach(function (s) {
+      parts.push(s.id, s.stimulus, s.environment, s.response, s.response_measure);
+      s.tc_ids.forEach(function (id) { var t = tcById[id]; parts.push(t.suite, t.name, t.source_file); });
+    });
+    f._text = parts.join("\n").toLowerCase();
+    f._gap = f.is_leaf && (f.tc_count === 0 || f.uncovered_scenario_count > 0);
+  });
+
+  // ----- 머리말과 요약 -----
+  (function () {
+    var m = $("meta");
+    function item(label, value, cls) {
+      var s = el("span");
+      s.appendChild(document.createTextNode(label + " "));
+      s.appendChild(el("b", cls, value));
+      m.appendChild(s);
+    }
+    item("데이터 폴더", D.meta.data_dir, "path");
+    item("데이터베이스 생성", D.meta.built_at);
+    item("보고서 생성", D.meta.generated_at);
+    if (D.meta.note) m.appendChild(el("span", null, D.meta.note));
+
+    var T = D.totals;
+    [
+      ["검증되지 않은 기능", T.uncovered_leaf_count, T.leaf_count, "검증 대상인 기능"],
+      ["TC가 없는 인스턴스 시나리오", T.uncovered_scenario_count, T.scenario_count, "인스턴스 시나리오"],
+      ["연결되지 않은 TC", T.unlinked_tc_count, T.tc_count, "전체 TC"]
+    ].forEach(function (r) {
+      var box = el("div", "stat" + (r[1] > 0 ? " has-gap" : ""));
+      box.appendChild(el("div", "label", r[0]));
+      var fig = el("div", "fig");
+      fig.appendChild(el("span", "n", r[1]));
+      fig.appendChild(el("span", "of", "/ " + r[3] + " " + r[2] + "개"));
+      box.appendChild(fig);
+      var bar = el("div", "bar"), fill = el("i");
+      fill.style.width = (r[2] ? Math.max(r[1] / r[2] * 100, r[1] > 0 ? 2 : 0) : 0) + "%";
+      bar.appendChild(fill);
+      box.appendChild(bar);
+      $("stats").appendChild(box);
+    });
+  })();
+
+  // ----- 기능 표 -----
+  var open = {};        // 펼친 기능
+  var openTc = {};      // TC 목록을 펼친 시나리오
+  var gapOnly = false;
+  var query = "";
+
+  function statusCell(f) {
+    var td = el("td");
+    if (!f.is_leaf) {
+      if (f.uncovered_leaf_count > 0) td.appendChild(el("span", "pill crit", "검증되지 않은 기능 " + f.uncovered_leaf_count + "개"));
+      else td.appendChild(el("span", "quiet", "검증되지 않은 기능 없음"));
+    } else if (f.tc_count === 0) {
+      td.appendChild(el("span", "pill crit", "검증되지 않음"));
+    } else if (f.uncovered_scenario_count > 0) {
+      td.appendChild(el("span", "pill warn", "시나리오 " + f.uncovered_scenario_count + "개에 TC 없음"));
+    } else {
+      td.appendChild(el("span", "quiet", "없음"));
+    }
+    return td;
+  }
+
+  function tcTable(s) {
+    var box = el("div", "tcs");
+    var table = el("table"), head = el("thead"), hr = el("tr"), body = el("tbody");
+    [["ID", "num"], ["suite"], ["TC 이름"], ["소스 코드 이름"]].forEach(function (h) { hr.appendChild(el("th", h[1], h[0])); });
+    head.appendChild(hr); table.appendChild(head);
+    s.tc_ids.forEach(function (id) {
+      var t = tcById[id], tr = el("tr");
+      tr.appendChild(el("td", "num id", t.id));
+      tr.appendChild(el("td", "id", t.suite));
+      var name = el("td", "id", t.name);
+      var others = (D.tc_features[id] || []).filter(function (fid) { return fid !== s.feature_id; });
+      if (others.length) name.appendChild(el("span", "also", others.join(", ") + "도 검증"));
+      tr.appendChild(name);
+      tr.appendChild(el("td", "id", t.source_file));
+      body.appendChild(tr);
+    });
+    table.appendChild(body); box.appendChild(table);
+    return box;
+  }
+
+  function scenarioBlock(s) {
+    var box = el("div", "sc" + (s.tc_count === 0 ? " none" : ""));
+    var head = el("div", "sc-head");
+    head.appendChild(el("span", "id sid", s.id));
+    head.appendChild(s.tc_count === 0 ? el("span", "pill crit", "TC 없음") : el("span", "quiet", "TC " + s.tc_count + "개"));
+    box.appendChild(head);
+    var dl = el("dl", "stages");
+    [["자극", s.stimulus], ["환경", s.environment], ["응답", s.response], ["응답 측정", s.response_measure]].forEach(function (p) {
+      var st = el("div", "stage");
+      st.appendChild(el("dt", null, p[0]));
+      st.appendChild(el("dd", null, p[1]));
+      dl.appendChild(st);
+    });
+    box.appendChild(dl);
+    if (s.tc_count > 0) {
+      var btn = el("button", "link", openTc[s.id] ? "TC 접기" : "TC " + s.tc_count + "개 보기");
+      btn.type = "button";
+      btn.setAttribute("aria-expanded", openTc[s.id] ? "true" : "false");
+      btn.addEventListener("click", function () { openTc[s.id] = !openTc[s.id]; render(); });
+      head.appendChild(btn);
+      if (openTc[s.id]) box.appendChild(tcTable(s));
+    }
+    return box;
+  }
+
+  function detailRow(f) {
+    var tr = el("tr", "d"), td = el("td");
+    td.colSpan = 4;
+    var box = el("div", "detail");
+    box.appendChild(el("p", "desc", f.description));
+    var kv = el("div", "kv");
+    kv.appendChild(el("span", null, "IMS 원본 위치 " + f.ims_ref));
+    kv.appendChild(el("span", null, "계층 경로 " + f.path));
+    box.appendChild(kv);
+    (scenariosOf[f.id] || []).forEach(function (s) { box.appendChild(scenarioBlock(s)); });
+    td.appendChild(box); tr.appendChild(td);
+    return tr;
+  }
+
+  function visibleSet() {
+    var q = query.trim().toLowerCase();
+    var show = {};
+    D.features.forEach(function (f) {
+      if (!f.is_leaf) return;
+      if (gapOnly && !f._gap) return;
+      if (q && f._text.indexOf(q) === -1) return;
+      show[f.id] = true;
+      for (var p = f.parent_id; p; p = featureById[p].parent_id) show[p] = true;
+    });
+    return show;
+  }
+
+  function render() {
+    var show = visibleSet(), body = $("rows"), leaves = 0, shown = 0;
+    body.textContent = "";
+    D.features.forEach(function (f) {
+      if (f.is_leaf) leaves++;
+      if (!show[f.id]) return;
+      var tr = el("tr", f.is_leaf ? "f" : "g");
+      var td = el("td"), cell = el("div", "feat d" + Math.min(f.depth, 3));
+      if (f.is_leaf) {
+        shown++;
+        var btn = el("button", "tg");
+        btn.type = "button";
+        btn.setAttribute("aria-expanded", open[f.id] ? "true" : "false");
+        btn.setAttribute("aria-label", f.name + " 펼치기");
+        btn.addEventListener("click", function () { open[f.id] = !open[f.id]; render(); });
+        cell.appendChild(btn);
+      } else {
+        cell.appendChild(el("span", "spacer"));
+      }
+      cell.appendChild(el("span", "nm", f.name));
+      cell.appendChild(el("span", "id", f.id));
+      td.appendChild(cell); tr.appendChild(td);
+
+      var sc = el("td");
+      if (f.is_leaf) {
+        var list = scenariosOf[f.id] || [];
+        if (list.length <= 12) {
+          var dots = el("span", "dots");
+          list.forEach(function (s) {
+            var d = el("i", s.tc_count === 0 ? "none" : null);
+            d.title = s.id + (s.tc_count === 0 ? ": TC 없음" : ": TC " + s.tc_count + "개");
+            dots.appendChild(d);
+          });
+          sc.appendChild(dots);
+        }
+        sc.appendChild(document.createTextNode(f.scenario_count + "개"));
+      } else {
+        sc.appendChild(el("span", null, "말단 기능 " + f.leaf_count + "개"));
+      }
+      tr.appendChild(sc);
+      tr.appendChild(el("td", "num", f.tc_count));
+      tr.appendChild(statusCell(f));
+      if (f.is_leaf && open[f.id]) tr.classList.add("open");
+      body.appendChild(tr);
+      if (f.is_leaf && open[f.id]) body.appendChild(detailRow(f));
+    });
+    $("none").hidden = shown > 0;
+    $("shown").textContent = "검증 대상인 기능 " + leaves + "개 중 " + shown + "개 표시";
+  }
+
+  $("f-all").addEventListener("click", function () { setFilter(false); });
+  $("f-gap").addEventListener("click", function () { setFilter(true); });
+  function setFilter(v) {
+    gapOnly = v;
+    $("f-all").setAttribute("aria-pressed", v ? "false" : "true");
+    $("f-gap").setAttribute("aria-pressed", v ? "true" : "false");
+    render();
+  }
+  $("q").addEventListener("input", function (e) { query = e.target.value; render(); });
+  $("open-all").addEventListener("click", function () {
+    var show = visibleSet();
+    D.features.forEach(function (f) { if (f.is_leaf && show[f.id]) open[f.id] = true; });
+    render();
+  });
+  $("close-all").addEventListener("click", function () { open = {}; openTc = {}; render(); });
+
+  // ----- 연결되지 않은 TC -----
+  (function () {
+    var body = $("unlinked");
+    D.unlinked_tc_ids.forEach(function (id) {
+      var t = tcById[id], tr = el("tr");
+      tr.appendChild(el("td", "num id", t.id));
+      tr.appendChild(el("td", "id", t.suite));
+      tr.appendChild(el("td", "id", t.name));
+      tr.appendChild(el("td", "id", t.source_file));
+      body.appendChild(tr);
+    });
+    $("un-title").textContent = "연결되지 않은 TC " + D.unlinked_tc_ids.length + "개";
+    $("un-none").hidden = D.unlinked_tc_ids.length > 0;
+    if (!D.unlinked_tc_ids.length) body.parentNode.hidden = true;
+  })();
+
+  // 처음에는 공백이 있는 기능을 펼쳐 둔다. 공백이 많으면 화면이 길어지므로 다섯 개까지만 펼친다.
+  D.features.filter(function (f) { return f._gap; }).slice(0, 5).forEach(function (f) { open[f.id] = true; });
+  render();
+})();
+</script>

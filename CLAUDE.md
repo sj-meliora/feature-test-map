@@ -4,14 +4,14 @@ SSD FW의 기능을 시나리오로 세분하고, 시나리오와 TC 사이의 �
 
 ## 현재 상태
 
-요구사항을 정리하고 설계 결정을 논의하는 단계다. 구현은 네 테이블의 변환과 조회까지 진행하였으며(`DESIGN.md`의 '레코드 확장과 시각화 PoC'), 예시 데이터로 동작한다. 시각화(FR-4), 추출(FR-1, FR-2), 관계 식별(FR-3)은 아직 구현하지 않았다.
+요구사항을 정리하고 설계 결정을 논의하는 단계다. 구현은 네 테이블의 변환과 조회, 검증 공백 보고서(DP-8)까지 진행하였으며(`DESIGN.md`의 '레코드 확장과 시각화 PoC'), 예시 데이터로 동작한다. 추출(FR-1, FR-2)과 관계 식별(FR-3)은 아직 구현하지 않았다.
 
 - `REQUIREMENT.md`: 요구사항. 이 프로젝트가 무엇을 해야 하는지는 이 문서를 기준으로 판단한다.
 - `DESIGN.md`: 설계 결정(DP). 결정된 내용, 미결 사항, 논의 내용을 DP 단위로 기록한다.
 - `docs/record-relations.html`: 레코드 관계도. 테이블의 구조와 참조 관계를 나타낸 그림이며, 테이블 구성을 바꾸면 함께 고친다.
 - `design/`: DP별 세부 설계 문서(`dp1.md` 등). `DESIGN.md`의 각 DP에서 링크한다. 문서 안에 결정됨으로 표시한 항목을 제외하면 제안(미채택)이며, 채택한 내용은 `DESIGN.md`의 해당 DP에 반영한다.
 - `examples/`: 예시 데이터. 실제 데이터가 아니다.
-- `.claude/skills/ftm-query/`: 조회 스킬. 안내 문서(`SKILL.md`), 정의 파일(`schema.sql`), 조회 스크립트와 변환 명령(`scripts/`), PyYAML의 사본(`vendor/`)으로 구성한다. `schema.sql`을 고치면 `SKILL.md`의 스키마 설명도 함께 고친다. `vendor/`의 파일은 고치지 않는다.
+- `.claude/skills/ftm-query/`: 조회 스킬. 안내 문서(`SKILL.md`), 정의 파일(`schema.sql`), 조회 스크립트와 변환 명령(`scripts/`), 보고서 명령과 화면의 틀(`report/`), PyYAML의 사본(`vendor/`)으로 구성한다. `report/`는 `scripts/common.py`에만 의존하게 유지한다. `schema.sql`을 고치면 `SKILL.md`의 스키마 설명도 함께 고친다. `vendor/`의 파일은 고치지 않는다.
 - `tests/`: 스킬의 테스트. 저장소 최상위에서 `python3 -m unittest discover -s tests`로 실행한다.
 
 ## 작업 규칙
