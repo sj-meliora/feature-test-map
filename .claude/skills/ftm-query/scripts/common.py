@@ -14,12 +14,13 @@ ENV_VAR = "FTM_DATA_DIR"
 SKILL_DIR = Path(__file__).resolve().parent.parent
 SCHEMA_PATH = SKILL_DIR / "schema.sql"
 BUILD_SCRIPT = SKILL_DIR / "scripts" / "build.py"
-VENDOR_DIR = SKILL_DIR / "vendor"
+# 스킬이 함께 쓰는 모듈(ftm_core)과 외부 패키지의 사본을 두는 폴더.
+LIB_DIR = SKILL_DIR.parent.parent / "lib"
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
 
-FEATURES_FILE = "features.yaml"
-SCENARIOS_FILE = "scenarios.yaml"
-TCS_FILE = "tcs.jsonl"
-RELATIONS_FILE = "scenario_tc.jsonl"
+from ftm_core.sources import FEATURES_FILE, RELATIONS_FILE, SCENARIOS_FILE, TCS_FILE  # noqa: E402
+
 # 원본 파일. 변환에는 네 파일이 모두 있어야 하며, 해시는 네 파일의 내용으로 계산한다.
 SOURCE_FILES = (FEATURES_FILE, SCENARIOS_FILE, TCS_FILE, RELATIONS_FILE)
 

@@ -1,2 +1,4 @@
 __pycache__/
 /examples/build/
+/data/build
+/.claude/settings.local.json

@@ -19,6 +19,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 SKILL = REPO / ".claude" / "skills" / "ftm-query"
+LIB = REPO / ".claude" / "lib"
 EXAMPLES = REPO / "examples"
 SOURCES = ("features.yaml", "scenarios.yaml", "tcs.jsonl", "scenario_tc.jsonl")
 
@@ -68,6 +69,18 @@ class Base(unittest.TestCase):
         for name in SOURCES:
             shutil.copy(EXAMPLES / name, self.data / name)
         self.db = self.data / "build" / "ftm.db"
+
+    def install_copy(self, with_lib=True):
+        """스킬 폴더와 공용 폴더(lib)를 저장소와 같은 배치로 복사하고, 복사한 스킬 폴더를 돌려준다.
+
+        with_lib가 거짓이면 공용 폴더를 복사하지 않는다.
+        """
+        root = self.tmp / "installed"
+        ignore = shutil.ignore_patterns("__pycache__")
+        shutil.copytree(SKILL, root / "skills" / "ftm-query", ignore=ignore)
+        if with_lib:
+            shutil.copytree(LIB, root / "lib", ignore=ignore)
+        return root / "skills" / "ftm-query"
 
     def run_script(self, name, *args, skill=SKILL, env_value="__data__"):
         env = {k: v for k, v in os.environ.items() if k != "FTM_DATA_DIR"}
@@ -248,8 +261,7 @@ class Freshness(Base):
 
     def test_two_copies_with_different_schema(self):
         """스킬의 사본이 두 곳에 있고 한쪽의 정의만 고친 상황(design/dp6.md)."""
-        installed = self.tmp / "installed" / "ftm-query"
-        shutil.copytree(SKILL, installed, ignore=shutil.ignore_patterns("__pycache__"))
+        installed = self.install_copy()
         with open(installed / "schema.sql", "a", encoding="utf-8") as f:
             f.write("\n-- 설치된 사본에만 있는 이전 정의\n")
 
@@ -425,15 +437,14 @@ class ReadOnly(Base):
         self.assertEqual(self.rows(self.sql("SELECT COUNT(*) FROM feature")), [["8"]])
 
     def test_query_writes_no_file(self):
-        """조회 스크립트는 데이터 폴더와 스킬 폴더에 어떤 파일도 쓰지 않는다."""
-        installed = self.tmp / "installed" / "ftm-query"
-        shutil.copytree(SKILL, installed, ignore=shutil.ignore_patterns("__pycache__"))
+        """조회 스크립트는 데이터 폴더, 스킬 폴더, 공용 폴더에 어떤 파일도 쓰지 않는다."""
+        installed = self.install_copy()
         self.assertEqual(self.build(skill=installed).returncode, 0)
-        before = (self.snapshot(self.data), self.snapshot(installed))
+        before = (self.snapshot(self.data), self.snapshot(installed.parent.parent))
         self.assertEqual(self.query("schema", skill=installed).returncode, 0)
         self.assertEqual(self.sql("SELECT * FROM v_feature_subtree", skill=installed).returncode, 0)
         self.assertNotEqual(self.sql("DELETE FROM feature", skill=installed).returncode, 0)
-        self.assertEqual((self.snapshot(self.data), self.snapshot(installed)), before)
+        self.assertEqual((self.snapshot(self.data), self.snapshot(installed.parent.parent)), before)
 
     def test_build_does_not_change_source(self):
         before = (self.data / "features.yaml").read_bytes()
@@ -876,7 +887,7 @@ class OtherSourceValidation(Base):
 
 class VendoredYaml(Base):
     def test_build_works_without_installed_pyyaml(self):
-        """PyYAML이 설치되지 않은 환경에서는 스킬에 포함한 사본으로 변환한다."""
+        """PyYAML이 설치되지 않은 환경에서는 공용 폴더(.claude/lib/vendor/)의 사본으로 변환한다."""
         scripts = SKILL / "scripts"
         code = (
             "import sys\n"
@@ -892,7 +903,7 @@ class VendoredYaml(Base):
         env = dict(os.environ, FTM_DATA_DIR=str(self.data), PYTHONIOENCODING="utf-8")
         result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, encoding="utf-8", env=env)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn(str(SKILL / "vendor" / "yaml"), result.stdout)
+        self.assertIn(str(LIB / "vendor" / "yaml"), result.stdout)
         self.assertEqual(self.rows(self.sql("SELECT COUNT(*) FROM feature")), [["8"]])
 
 
