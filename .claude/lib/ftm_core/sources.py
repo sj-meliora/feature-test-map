@@ -39,7 +39,7 @@ class DuplicateKey(ValueError):
 # ---------------------------------------------------------------------------
 
 def load_yaml_module():
-    """설치된 PyYAML이 있으면 그것을 쓰고, 없으면 함께 둔 사본을 쓴다."""
+    """설치된 PyYAML이 있으면 그것을 쓰고, 없으면 공용 폴더(.claude/lib/vendor/)의 사본을 쓴다."""
     try:
         import yaml
     except ImportError:

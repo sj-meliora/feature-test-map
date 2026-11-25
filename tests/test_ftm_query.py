@@ -887,7 +887,7 @@ class OtherSourceValidation(Base):
 
 class VendoredYaml(Base):
     def test_build_works_without_installed_pyyaml(self):
-        """PyYAML이 설치되지 않은 환경에서는 스킬에 포함한 사본으로 변환한다."""
+        """PyYAML이 설치되지 않은 환경에서는 공용 폴더(.claude/lib/vendor/)의 사본으로 변환한다."""
         scripts = SKILL / "scripts"
         code = (
             "import sys\n"
