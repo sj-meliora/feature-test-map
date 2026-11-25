@@ -9,7 +9,7 @@
 | `tcs.jsonl` | TC (DP-2) | JSONL | 20 |
 | `scenario_tc.jsonl` | 시나리오-TC 관계 (DP-3) | JSONL | 19 |
 
-TC의 suite, 이름, 소스 코드 이름은 지어낸 값이며, 가리키는 소스 코드는 없다. 시나리오-TC 관계도 지어낸 값이며, TC의 내용을 분석하여 식별한 결과가 아니다.
+TC의 suite, 이름, 소스 코드 이름, 운영 조직, 실행 환경은 지어낸 값이며, 가리키는 소스 코드는 없다. 시나리오-TC 관계도 지어낸 값이며, TC의 내용을 분석하여 식별한 결과가 아니다.
 
 예시 데이터는 다음 상황을 포함하도록 구성하였다.
 
@@ -23,6 +23,9 @@ TC의 suite, 이름, 소스 코드 이름은 지어낸 값이며, 가리키는 �
 | 인스턴스 시나리오가 두 개이고 둘 다 TC가 연결된 기능 | `NS-CREATE` |
 | 두 기능을 함께 검증하는 TC | TC 4(`ns_create_delete_loop`)는 `NS-CREATE`와 `NS-DELETE`를, TC 17(`flush_then_spo`)은 `FLUSH`와 `SPOR`를 검증한다. |
 | 어느 인스턴스 시나리오에도 연결되지 않은 TC | TC 18, 19, 20 |
+| 운영 조직과 실행 환경이 다른 TC | `owner`가 `sv`이고 `platform`이 `msvp`인 TC가 12개, `owner`가 `sw-dev`이고 `platform`이 `hapsim`인 TC가 8개(TC 2, 3, 8, 9, 10, 11, 13, 19)다. |
+| 모든 TC를 기준으로 하면 검증되지만 한 분류를 기준으로 하면 검증되지 않는 기능 | `SANITIZE`의 TC는 모두 `sw-dev`의 TC이므로 `sv`를 기준으로 하면 검증되지 않는다. `NS-DELETE`와 `SPOR`의 TC는 모두 `sv`의 TC이므로 `sw-dev`를 기준으로 하면 검증되지 않는다. |
+| 한 분류를 기준으로 할 때에만 TC가 없는 인스턴스 시나리오 | `NS-CREATE-S2`의 TC는 `sw-dev`의 TC 하나뿐이므로 `sv`를 기준으로 하면 TC가 없다. |
 | 묶음 기능의 결과가 하위 기능의 합으로 계산되는 경우 | `NS`의 TC는 5개다. `NS-CREATE`의 4개와 `NS-DELETE`의 2개 중 TC 4가 겹친다. |
 
 이 데이터로 SQLite 데이터베이스를 만들고 조회한 결과는 `design/dp5.md`의 '질의 예시'에 있다.

@@ -23,7 +23,9 @@ import common
 
 FEATURE_FIELDS = ("id", "name", "path", "parent_id", "description", "ims_ref")
 SCENARIO_FIELDS = ("id", "feature_id", "stimulus", "environment", "response", "response_measure")
-TC_FIELDS = ("id", "suite", "name", "source_file")
+TC_FIELDS = ("id", "suite", "name", "source_file", "owner", "platform")
+# 값의 목록을 정의 파일의 뷰에서 읽는 TC의 분류 항목. (항목, 값 목록 뷰)
+TC_CLASS_VIEWS = (("owner", "v_tc_owner"), ("platform", "v_tc_platform"))
 RELATION_FIELDS = ("scenario_id", "tc_id")
 PATH_SEP = " > "
 SCENARIO_NUMBER = re.compile(r"[1-9][0-9]*")
@@ -266,9 +268,23 @@ def _jsonl_records(rows, fields, errors):
     return records
 
 
+def tc_class_values():
+    """owner와 platform에 허용하는 값을 정의 파일의 값 목록 뷰에서 읽는다. 값의 목록은 정의 파일에만 둔다."""
+    conn = sqlite3.connect(":memory:")
+    try:
+        conn.executescript(common.SCHEMA_PATH.read_text(encoding="utf-8"))
+        return {
+            key: [row[0] for row in conn.execute(f"SELECT {key} FROM {view}")]
+            for key, view in TC_CLASS_VIEWS
+        }
+    finally:
+        conn.close()
+
+
 def validate_tcs(rows):
     errors = []
     records = []
+    allowed = tc_class_values()
     for tag, rec in _jsonl_records(rows, TC_FIELDS, errors):
         ok = True
         if not _is_int(rec["id"]) or rec["id"] < 1:
@@ -276,6 +292,14 @@ def validate_tcs(rows):
             ok = False
         for key in ("suite", "name", "source_file"):
             ok = _check_string(tag, rec, key, errors, yaml_hint=False) and ok
+        for key, values in allowed.items():
+            if not _check_string(tag, rec, key, errors, yaml_hint=False):
+                ok = False
+            elif rec[key] not in values:
+                errors.append(
+                    f"{tag} {key}의 값 {rec[key]!r}은 허용하는 값({', '.join(values)})이 아니다."
+                )
+                ok = False
         if ok:
             records.append((tag, rec))
 

@@ -56,7 +56,7 @@ header { display: grid; gap: 6px; }
 #view-gaps { max-width: 1120px; }
 
 /* ----- 화면 1: 검증 공백 ----- */
-/* 배치: 위에서 아래로 요약 수치 세 개, 걸러 보기, 기능 표(행을 펼치면 시나리오, 다시 펼치면 TC), 연결되지 않은 TC. */
+/* 배치: 위에서 아래로 TC 분류 고르기, 요약 수치 세 개, 걸러 보기, 기능 표(행을 펼치면 시나리오, 다시 펼치면 TC), 연결되지 않은 TC. */
 #view-gaps h1, #view-gaps h2, #view-gaps p { margin: 0; }
 #view-gaps h2 { font-size: 15px; color: var(--ink); }
 #view-gaps code, #view-gaps .id { font-family: var(--mono); font-size: 0.92em; }
@@ -73,6 +73,11 @@ header { display: grid; gap: 6px; }
 #view-gaps .bar i { display: block; height: 100%; background: var(--crit); border-radius: 3px; }
 #view-gaps .stat:not(.has-gap) .bar i { background: var(--ok); }
 #view-gaps .tools { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+#view-gaps .cls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+#view-gaps .cls .cap { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+#view-gaps .cls .seg { flex-wrap: wrap; }
+#view-gaps .cls .seg .ax { color: var(--muted); font-weight: 400; margin-right: 5px; }
+#view-gaps .cls .note { flex: 1 1 260px; color: var(--muted); font-size: 12.5px; }
 #view-gaps .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; background: var(--surface); }
 #view-gaps .seg button { border: 0; background: transparent; padding: 7px 13px; cursor: pointer; color: var(--muted); }
 #view-gaps .seg button + button { border-left: 1px solid var(--line); }
@@ -280,6 +285,12 @@ header { display: grid; gap: 6px; }
   </nav>
 
   <div class="view" id="view-gaps" role="tabpanel" aria-labelledby="tab-gaps">
+  <div class="cls">
+    <span class="cap" id="cls-cap">TC 분류</span>
+    <div class="seg" role="group" aria-labelledby="cls-cap" id="cls"></div>
+    <p class="note" id="cls-note" aria-live="polite"></p>
+  </div>
+
   <section class="stats" id="stats" aria-label="요약"></section>
 
   <section class="sect">
@@ -314,7 +325,7 @@ header { display: grid; gap: 6px; }
     <div class="panel">
       <div class="scroll">
         <table>
-          <thead><tr><th class="num">ID</th><th>suite</th><th>TC 이름</th><th>소스 코드 이름</th></tr></thead>
+          <thead><tr><th class="num">ID</th><th>suite</th><th>TC 이름</th><th>소스 코드 이름</th><th>owner</th><th>platform</th></tr></thead>
           <tbody id="unlinked"></tbody>
         </table>
       </div>
@@ -415,8 +426,19 @@ header { display: grid; gap: 6px; }
       s.tc_ids.forEach(function (id) { var t = tcById[id]; parts.push(t.suite, t.name, t.source_file); });
     });
     f._text = parts.join("\n").toLowerCase();
-    f._gap = f.is_leaf && (f.tc_count === 0 || f.uncovered_scenario_count > 0);
   });
+
+  // ----- TC 분류 -----
+  // 고른 분류. null이면 모든 TC로 판정한다. 분류를 고르면 그 분류의 TC만으로 구한 수치(D.classes)로 바꾸어 보인다.
+  var cls = null;
+  function counts(f) { return cls ? cls.features[f.id] : f; }
+  function tcCount(s) { return cls ? cls.scenarios[s.id] : s.tc_count; }
+  function inClass(id) { return !cls || tcById[id][cls.axis] === cls.value; }
+  function tcIds(s) { return s.tc_ids.filter(inClass); }
+  function isGap(f) {
+    var c = counts(f);
+    return f.is_leaf && (c.tc_count === 0 || c.uncovered_scenario_count > 0);
+  }
 
   // ----- 머리말과 요약 -----
   (function () {
@@ -431,12 +453,15 @@ header { display: grid; gap: 6px; }
     item("데이터베이스 생성", D.meta.built_at);
     item("보고서 생성", D.meta.generated_at);
     if (D.meta.note) m.appendChild(el("span", null, D.meta.note));
+  })();
 
-    var T = D.totals;
+  function renderStats() {
+    var T = cls ? cls.totals : D.totals;
+    $("stats").textContent = "";
     [
       ["검증되지 않은 기능", T.uncovered_leaf_count, T.leaf_count, "검증 대상인 기능"],
       ["TC가 없는 인스턴스 시나리오", T.uncovered_scenario_count, T.scenario_count, "인스턴스 시나리오"],
-      ["연결되지 않은 TC", T.unlinked_tc_count, T.tc_count, "전체 TC"]
+      ["연결되지 않은 TC", T.unlinked_tc_count, T.tc_count, cls ? "이 분류의 TC" : "전체 TC"]
     ].forEach(function (r) {
       var box = el("div", "stat" + (r[1] > 0 ? " has-gap" : ""));
       box.appendChild(el("div", "label", r[0]));
@@ -450,7 +475,7 @@ header { display: grid; gap: 6px; }
       box.appendChild(bar);
       $("stats").appendChild(box);
     });
-  })();
+  }
 
   // ----- 기능 표 -----
   var open = {};        // 펼친 기능
@@ -459,14 +484,14 @@ header { display: grid; gap: 6px; }
   var query = "";
 
   function statusCell(f) {
-    var td = el("td");
+    var td = el("td"), c = counts(f);
     if (!f.is_leaf) {
-      if (f.uncovered_leaf_count > 0) td.appendChild(el("span", "pill crit", "검증되지 않은 기능 " + f.uncovered_leaf_count + "개"));
+      if (c.uncovered_leaf_count > 0) td.appendChild(el("span", "pill crit", "검증되지 않은 기능 " + c.uncovered_leaf_count + "개"));
       else td.appendChild(el("span", "quiet", "검증되지 않은 기능 없음"));
-    } else if (f.tc_count === 0) {
+    } else if (c.tc_count === 0) {
       td.appendChild(el("span", "pill crit", "검증되지 않음"));
-    } else if (f.uncovered_scenario_count > 0) {
-      td.appendChild(el("span", "pill warn", "시나리오 " + f.uncovered_scenario_count + "개에 TC 없음"));
+    } else if (c.uncovered_scenario_count > 0) {
+      td.appendChild(el("span", "pill warn", "시나리오 " + c.uncovered_scenario_count + "개에 TC 없음"));
     } else {
       td.appendChild(el("span", "quiet", "없음"));
     }
@@ -484,9 +509,9 @@ header { display: grid; gap: 6px; }
   function tcTable(s) {
     var box = el("div", "tcs");
     var table = el("table"), head = el("thead"), hr = el("tr"), body = el("tbody");
-    [["ID", "num"], ["suite"], ["TC 이름"], ["소스 코드 이름"]].forEach(function (h) { hr.appendChild(el("th", h[1], h[0])); });
+    [["ID", "num"], ["suite"], ["TC 이름"], ["소스 코드 이름"], ["owner"], ["platform"]].forEach(function (h) { hr.appendChild(el("th", h[1], h[0])); });
     head.appendChild(hr); table.appendChild(head);
-    s.tc_ids.forEach(function (id) {
+    tcIds(s).forEach(function (id) {
       var t = tcById[id], tr = el("tr");
       tr.appendChild(el("td", "num id", t.id));
       tr.appendChild(el("td", "id", t.suite));
@@ -495,6 +520,8 @@ header { display: grid; gap: 6px; }
       if (others.length) name.appendChild(el("span", "also", others.join(", ") + "도 검증"));
       tr.appendChild(name);
       tr.appendChild(el("td", "id", t.source_file));
+      tr.appendChild(el("td", "id", t.owner));
+      tr.appendChild(el("td", "id", t.platform));
       body.appendChild(tr);
     });
     table.appendChild(body); box.appendChild(table);
@@ -502,10 +529,11 @@ header { display: grid; gap: 6px; }
   }
 
   function scenarioBlock(s) {
-    var box = el("div", "sc" + (s.tc_count === 0 ? " none" : ""));
+    var n = tcCount(s);
+    var box = el("div", "sc" + (n === 0 ? " none" : ""));
     var head = el("div", "sc-head");
     head.appendChild(el("span", "id sid", s.id));
-    head.appendChild(s.tc_count === 0 ? el("span", "pill crit", "TC 없음") : el("span", "quiet", "TC " + s.tc_count + "개"));
+    head.appendChild(n === 0 ? el("span", "pill crit", "TC 없음") : el("span", "quiet", "TC " + n + "개"));
     head.appendChild(mapLink("관계 지도", { kind: "scenario", id: s.id }));
     box.appendChild(head);
     var dl = el("dl", "stages");
@@ -516,8 +544,8 @@ header { display: grid; gap: 6px; }
       dl.appendChild(st);
     });
     box.appendChild(dl);
-    if (s.tc_count > 0) {
-      var btn = el("button", "link tc-toggle", openTc[s.id] ? "TC 접기" : "TC " + s.tc_count + "개 보기");
+    if (n > 0) {
+      var btn = el("button", "link tc-toggle", openTc[s.id] ? "TC 접기" : "TC " + n + "개 보기");
       btn.type = "button";
       btn.setAttribute("aria-expanded", openTc[s.id] ? "true" : "false");
       btn.addEventListener("click", function () { openTc[s.id] = !openTc[s.id]; render(); });
@@ -547,7 +575,7 @@ header { display: grid; gap: 6px; }
     var show = {};
     D.features.forEach(function (f) {
       if (!f.is_leaf) return;
-      if (gapOnly && !f._gap) return;
+      if (gapOnly && !isGap(f)) return;
       if (q && f._text.indexOf(q) === -1) return;
       show[f.id] = true;
       for (var p = f.parent_id; p; p = featureById[p].parent_id) show[p] = true;
@@ -584,8 +612,9 @@ header { display: grid; gap: 6px; }
         if (list.length <= 12) {
           var dots = el("span", "dots");
           list.forEach(function (s) {
-            var d = el("i", s.tc_count === 0 ? "none" : null);
-            d.title = s.id + (s.tc_count === 0 ? ": TC 없음" : ": TC " + s.tc_count + "개");
+            var n = tcCount(s);
+            var d = el("i", n === 0 ? "none" : null);
+            d.title = s.id + (n === 0 ? ": TC 없음" : ": TC " + n + "개");
             dots.appendChild(d);
           });
           sc.appendChild(dots);
@@ -595,7 +624,7 @@ header { display: grid; gap: 6px; }
         sc.appendChild(el("span", null, "말단 기능 " + f.leaf_count + "개"));
       }
       tr.appendChild(sc);
-      tr.appendChild(el("td", "num", f.tc_count));
+      tr.appendChild(el("td", "num", counts(f).tc_count));
       tr.appendChild(statusCell(f));
       if (f.is_leaf && open[f.id]) tr.classList.add("open");
       body.appendChild(tr);
@@ -622,24 +651,49 @@ header { display: grid; gap: 6px; }
   $("close-all").addEventListener("click", function () { open = {}; openTc = {}; render(); });
 
   // ----- 연결되지 않은 TC -----
-  (function () {
-    var body = $("unlinked");
-    D.unlinked_tc_ids.forEach(function (id) {
+  function renderUnlinked() {
+    var body = $("unlinked"), ids = D.unlinked_tc_ids.filter(inClass);
+    body.textContent = "";
+    ids.forEach(function (id) {
       var t = tcById[id], tr = el("tr");
       tr.appendChild(el("td", "num id", t.id));
       tr.appendChild(el("td", "id", t.suite));
       tr.appendChild(el("td", "id", t.name));
       tr.appendChild(el("td", "id", t.source_file));
+      tr.appendChild(el("td", "id", t.owner));
+      tr.appendChild(el("td", "id", t.platform));
       body.appendChild(tr);
     });
-    $("un-title").textContent = "연결되지 않은 TC " + D.unlinked_tc_ids.length + "개";
-    $("un-none").hidden = D.unlinked_tc_ids.length > 0;
-    if (!D.unlinked_tc_ids.length) body.parentNode.hidden = true;
-  })();
+    $("un-title").textContent = "연결되지 않은 TC " + ids.length + "개";
+    $("un-none").hidden = ids.length > 0;
+    body.parentNode.hidden = !ids.length;
+  }
+
+  // ----- TC 분류 고르기 -----
+  // '모든 TC'와, 분류 항목(owner, platform)의 값마다 단추를 하나씩 둔다.
+  function setClass(c) {
+    cls = c;
+    Array.prototype.forEach.call($("cls").children, function (b) {
+      b.setAttribute("aria-pressed", b._cls === c ? "true" : "false");
+    });
+    $("cls-note").textContent = c
+      ? c.axis + "의 값이 " + c.value + "인 TC만으로 판정한 결과다. 다른 TC는 세지 않는다."
+      : "모든 TC로 판정한 결과다.";
+    renderStats(); renderUnlinked(); render();
+  }
+  [null].concat(D.classes).forEach(function (c) {
+    var b = el("button");
+    b.type = "button";
+    b._cls = c;
+    if (c) { b.appendChild(el("span", "ax", c.axis)); b.appendChild(document.createTextNode(c.value)); }
+    else b.textContent = "모든 TC";
+    b.addEventListener("click", function () { setClass(c); });
+    $("cls").appendChild(b);
+  });
 
   // 처음에는 공백이 있는 기능을 펼쳐 둔다. 공백이 많으면 화면이 길어지므로 다섯 개까지만 펼친다.
-  D.features.filter(function (f) { return f._gap; }).slice(0, 5).forEach(function (f) { open[f.id] = true; });
-  render();
+  D.features.filter(isGap).slice(0, 5).forEach(function (f) { open[f.id] = true; });
+  setClass(null);
 })();
 </script>
 <script>
@@ -947,7 +1001,7 @@ header { display: grid; gap: 6px; }
       stages = [["자극", s.stimulus], ["환경", s.environment], ["응답", s.response], ["응답 측정", s.response_measure]];
     } else if (focus.kind === "tc") {
       var t = tcById[focus.id];
-      kind = "TC"; name = t.id + "  " + t.name; text = "suite " + t.suite + " · 소스 코드 이름 " + t.source_file;
+      kind = "TC"; name = t.id + "  " + t.name; text = "suite " + t.suite + " · 소스 코드 이름 " + t.source_file + " · owner " + t.owner + " · platform " + t.platform;
       if (!count(R.S)) text += " · 어느 인스턴스 시나리오에도 연결되어 있지 않다.";
     } else if (focus.kind === "suite") {
       kind = "suite"; name = focus.id;

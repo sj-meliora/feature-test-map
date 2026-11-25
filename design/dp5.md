@@ -86,8 +86,13 @@
 | `v_feature_tc_count` | 말단 기능 하나 | `feature_id`, `scenario_count`, `uncovered_scenario_count`, `tc_count` |
 | `v_subtree_tc_count` | 기능 하나. 묶음 기능과 말단 기능을 모두 포함한다. | `feature_id`, `leaf_count`, `uncovered_leaf_count`, `tc_count` |
 | `v_unlinked_tc` | 어느 인스턴스 시나리오에도 연결되지 않은 TC 하나 | `tc` 테이블과 같다. |
+| `v_tc_owner`, `v_tc_platform` | `owner` 또는 `platform`에 허용하는 값 하나 | `owner` 또는 `platform` |
+| `v_scenario_tc_count_by_owner`, `v_scenario_tc_count_by_platform` | (분류 값, 인스턴스 시나리오) 쌍 하나 | `owner` 또는 `platform`, `scenario_id`, `feature_id`, `tc_count` |
+| `v_feature_tc_count_by_owner`, `v_feature_tc_count_by_platform` | (분류 값, 말단 기능) 쌍 하나 | `owner` 또는 `platform`, `feature_id`, `scenario_count`, `uncovered_scenario_count`, `tc_count` |
+| `v_subtree_tc_count_by_owner`, `v_subtree_tc_count_by_platform` | (분류 값, 기능) 쌍 하나. 묶음 기능과 말단 기능을 모두 포함한다. | `owner` 또는 `platform`, `feature_id`, `leaf_count`, `uncovered_leaf_count`, `tc_count` |
 
 - `tc_count`는 그 행의 대상에 연결된 TC의 수이며, 같은 TC는 한 번만 센다.
+- 이름이 `_by_owner`와 `_by_platform`으로 끝나는 뷰는 TC의 분류(DESIGN.md의 DP-2)별 집계다. 열의 의미는 이름의 앞부분이 같은 뷰와 같으며, 그 분류 값을 가진 TC만 센다. 그 값을 가진 TC가 하나도 없는 분류 값도 행으로 나타난다.
 - `scenario_count`는 그 기능에 속한 인스턴스 시나리오의 수다. `uncovered_scenario_count`는 그중에서 TC가 하나도 연결되지 않은 시나리오의 수다.
 - `leaf_count`는 그 기능 아래에 있는 말단 기능의 수다. 말단 기능 자신의 행에서는 1이다. `uncovered_leaf_count`는 그중에서 TC가 하나도 연결되지 않은 기능의 수다.
 
@@ -98,6 +103,7 @@
 | 인스턴스 시나리오 단위의 공백 | `v_scenario_tc_count`에서 `tc_count = 0`인 행 |
 | 검증되지 않은 기능 | `v_feature_tc_count`에서 `tc_count = 0`인 행 |
 | 묶음 기능 아래의 검증되지 않은 기능의 수 | `v_subtree_tc_count`에서 그 묶음의 `uncovered_leaf_count` |
+| 분류별 공백. 예: `sv`가 검증하지 않는 인스턴스 시나리오 | `v_scenario_tc_count_by_owner`에서 `owner = 'sv'`이고 `tc_count = 0`인 행 |
 
 묶음 기능 `NS` 아래에 `NS-CREATE`와 `NS-DELETE`가 있고 관계가 다음과 같은 경우를 예로 든다.
 
@@ -247,6 +253,32 @@ ORDER BY t.id;
 |---|---|---|---|
 | 4 | tc/nvme_admin | ns_create_delete_loop | 2 |
 | 17 | tc/power | flush_then_spo | 2 |
+
+### 검증 조직(sv)의 TC로 검증되지 않는 기능과 인스턴스 시나리오는 무엇인가
+
+```sql
+SELECT feature_id FROM v_feature_tc_count_by_owner WHERE owner = 'sv' AND tc_count = 0 ORDER BY feature_id;
+```
+
+| feature_id |
+|---|
+| PS-TRANSITION |
+| SANITIZE |
+
+```sql
+SELECT scenario_id, feature_id FROM v_scenario_tc_count_by_owner
+WHERE owner = 'sv' AND tc_count = 0
+ORDER BY scenario_id;
+```
+
+| scenario_id | feature_id |
+|---|---|
+| NS-CREATE-S2 | NS-CREATE |
+| PS-TRANSITION-S1 | PS-TRANSITION |
+| SANITIZE-S1 | SANITIZE |
+| SANITIZE-S2 | SANITIZE |
+
+`SANITIZE`는 모든 TC를 기준으로 하면 TC가 3개 연결된 기능이지만, 세 TC의 `owner`가 모두 `sw-dev`이므로 `sv`를 기준으로 하면 검증되지 않은 기능이다.
 
 ### 어느 인스턴스 시나리오에도 연결되지 않은 TC는 무엇인가
 

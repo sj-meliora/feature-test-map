@@ -60,6 +60,35 @@ class Report(Base):
         self.assertEqual(data["tc_features"], {"4": ["NS-CREATE", "NS-DELETE"], "17": ["FLUSH", "SPOR"]})
         self.assertEqual(data["unlinked_tc_ids"], [18, 19, 20])
         self.assertEqual(len(data["tcs"]), 20)
+        self.assertEqual((data["tcs"][0]["owner"], data["tcs"][1]["platform"]), ("sv", "hapsim"))
+
+    def test_class_data_matches_views(self):
+        """TC의 분류 값마다, 그 값인 TC만으로 구한 수치가 분류별 집계 뷰와 일치한다."""
+        data = embedded_data(self.built())
+        classes = {(c["axis"], c["value"]): c for c in data["classes"]}
+        self.assertEqual(
+            list(classes), [("owner", "sv"), ("owner", "sw-dev"), ("platform", "msvp"), ("platform", "hapsim")]
+        )
+        sv = classes[("owner", "sv")]
+        self.assertEqual(sv["totals"], {
+            "leaf_count": 7, "uncovered_leaf_count": 2,
+            "scenario_count": 9, "uncovered_scenario_count": 4,
+            "tc_count": 12, "unlinked_tc_count": 2,
+        })
+        self.assertEqual(
+            sv["features"]["NS"], {"tc_count": 3, "uncovered_leaf_count": 0, "uncovered_scenario_count": None}
+        )
+        self.assertEqual(
+            sv["features"]["SANITIZE"], {"tc_count": 0, "uncovered_leaf_count": 1, "uncovered_scenario_count": 2}
+        )
+        self.assertEqual((sv["scenarios"]["NS-CREATE-S1"], sv["scenarios"]["NS-CREATE-S2"]), (2, 0))
+        hapsim = classes[("platform", "hapsim")]
+        self.assertEqual(
+            (hapsim["totals"]["uncovered_leaf_count"], hapsim["totals"]["tc_count"], hapsim["totals"]["unlinked_tc_count"]),
+            (3, 8, 1),
+        )
+        self.assertEqual(set(sv["features"]), {f["id"] for f in data["features"]})
+        self.assertEqual(set(sv["scenarios"]), {s["id"] for s in data["scenarios"]})
         self.assertEqual(data["meta"]["data_dir"], str(self.data.resolve()))
 
     def test_report_is_a_single_self_contained_file(self):

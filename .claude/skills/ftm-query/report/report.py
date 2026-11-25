@@ -5,6 +5,7 @@
 데이터 폴더는 --data-dir 인자나 환경 변수 FTM_DATA_DIR로 전달받으며, 보고서는 그 폴더의 build/report.html에 만든다.
 보고서의 수치는 조회 스크립트와 같은 집계 뷰에서 읽는다.
 보고서는 '검증 공백'과 '관계 지도'의 두 화면으로 구성되며, 두 화면은 틀(template.html) 안에 있다.
+TC의 분류(owner, platform)별 수치도 분류별 집계 뷰에서 읽어 함께 넣으며, 화면에서 분류를 고르면 그 수치로 바꾸어 보인다.
 
 이 폴더(report/)는 보고서에만 쓰이는 파일을 담으며, 스킬의 공용 모듈(scripts/common.py)에만 의존한다.
 """
@@ -28,6 +29,8 @@ import common  # noqa: E402
 TEMPLATE_PATH = REPORT_DIR / "template.html"
 DATA_MARK = "/*__DATA__*/"
 REPORT_NAME = "report.html"
+# TC의 분류 항목. 항목마다 값 목록 뷰(v_tc_<항목>)와 분류별 집계 뷰(v_*_by_<항목>)가 정의 파일에 있다.
+CLASS_AXES = ("owner", "platform")
 
 # 틀은 본문만 담는다. 파일 하나로 열리도록 문서의 머리를 붙인다.
 HTML_HEAD = (
@@ -40,6 +43,44 @@ HTML_TAIL = "\n</body>\n</html>\n"
 
 def report_path(data_dir):
     return common.db_path(data_dir).with_name(REPORT_NAME)
+
+
+def collect_classes(conn):
+    """TC의 분류 값마다, 그 값인 TC만으로 구한 수치를 분류별 집계 뷰에서 읽는다."""
+    classes = []
+    for axis in CLASS_AXES:
+        for (value,) in conn.execute(f"SELECT {axis} FROM v_tc_{axis}").fetchall():
+            features = {
+                row[0]: {"tc_count": row[1], "uncovered_leaf_count": row[2], "uncovered_scenario_count": row[3]}
+                for row in conn.execute(
+                    "SELECT st.feature_id, st.tc_count, st.uncovered_leaf_count, c.uncovered_scenario_count "
+                    f"FROM v_subtree_tc_count_by_{axis} st "
+                    f"LEFT JOIN v_feature_tc_count_by_{axis} c ON c.{axis} = st.{axis} AND c.feature_id = st.feature_id "
+                    f"WHERE st.{axis} = ?",
+                    (value,),
+                )
+            }
+            scenarios = dict(conn.execute(
+                f"SELECT scenario_id, tc_count FROM v_scenario_tc_count_by_{axis} WHERE {axis} = ?", (value,)
+            ))
+            names = (
+                "leaf_count", "uncovered_leaf_count", "scenario_count", "uncovered_scenario_count",
+                "tc_count", "unlinked_tc_count",
+            )
+            totals = conn.execute(
+                f"SELECT (SELECT COUNT(*) FROM v_feature_tc_count_by_{axis} WHERE {axis} = :v), "
+                f"       (SELECT COUNT(*) FROM v_feature_tc_count_by_{axis} WHERE {axis} = :v AND tc_count = 0), "
+                f"       (SELECT COUNT(*) FROM v_scenario_tc_count_by_{axis} WHERE {axis} = :v), "
+                f"       (SELECT COUNT(*) FROM v_scenario_tc_count_by_{axis} WHERE {axis} = :v AND tc_count = 0), "
+                f"       (SELECT COUNT(*) FROM tc WHERE {axis} = :v), "
+                f"       (SELECT COUNT(*) FROM v_unlinked_tc WHERE {axis} = :v)",
+                {"v": value},
+            ).fetchone()
+            classes.append({
+                "axis": axis, "value": value, "totals": dict(zip(names, totals)),
+                "features": features, "scenarios": scenarios,
+            })
+    return classes
 
 
 def collect(conn, info, data_dir):
@@ -116,7 +157,8 @@ def collect(conn, info, data_dir):
         "totals": totals,
         "features": features,
         "scenarios": scenarios,
-        "tcs": rows("SELECT id, suite, name, source_file FROM tc ORDER BY id"),
+        "tcs": rows("SELECT id, suite, name, source_file, owner, platform FROM tc ORDER BY id"),
+        "classes": collect_classes(conn),
         "tc_features": tc_features,
         "unlinked_tc_ids": [row[0] for row in conn.execute("SELECT id FROM v_unlinked_tc ORDER BY id")],
     }
