@@ -47,13 +47,25 @@ CREATE TABLE scenario (
 CREATE INDEX idx_scenario_feature_id ON scenario(feature_id);
 
 -- TC 레코드(DP-2). 한 행이 TC 하나다.
+-- owner는 TC를 운영하는 조직이고, platform은 TC를 실행하는 환경이다. 두 열의 조합에는 제약이 없다.
+-- 허용하는 값을 추가할 때에는 아래의 CHECK와 값 목록 뷰(v_tc_owner, v_tc_platform)를 함께 고친다.
 CREATE TABLE tc (
   id          INTEGER PRIMARY KEY,
   suite       TEXT NOT NULL,
   name        TEXT NOT NULL,
   source_file TEXT NOT NULL,
+  owner       TEXT NOT NULL CHECK (owner IN ('sv', 'sw-dev')),
+  platform    TEXT NOT NULL CHECK (platform IN ('msvp', 'hapsim')),
   UNIQUE (suite, name)
 );
+
+-- owner에 허용하는 값의 목록. 해당하는 TC가 없는 값도 분류별 집계에 행으로 나타나게 한다.
+CREATE VIEW v_tc_owner AS
+SELECT 'sv' AS owner UNION ALL SELECT 'sw-dev';
+
+-- platform에 허용하는 값의 목록.
+CREATE VIEW v_tc_platform AS
+SELECT 'msvp' AS platform UNION ALL SELECT 'hapsim';
 
 -- 시나리오-TC 관계 레코드(DP-3). 한 행이 'TC 하나가 인스턴스 시나리오 하나를 검증한다'는 연결 하나다.
 CREATE TABLE scenario_tc (
@@ -100,3 +112,67 @@ CREATE VIEW v_unlinked_tc AS
 SELECT t.*
 FROM tc t
 WHERE NOT EXISTS (SELECT 1 FROM scenario_tc r WHERE r.tc_id = t.id);
+
+-- 운영 조직(owner)별, 인스턴스 시나리오별 TC 개수. owner가 그 값인 TC만 센다.
+-- tc_count가 0이면 그 owner의 TC로는 검증되지 않는 인스턴스 시나리오다.
+CREATE VIEW v_scenario_tc_count_by_owner AS
+SELECT o.owner, s.id AS scenario_id, s.feature_id,
+  (SELECT COUNT(*) FROM scenario_tc r JOIN tc t ON t.id = r.tc_id
+    WHERE r.scenario_id = s.id AND t.owner = o.owner) AS tc_count
+FROM v_tc_owner o CROSS JOIN scenario s;
+
+-- 운영 조직(owner)별, 말단 기능별 집계. owner가 그 값인 TC만 센다. 같은 TC는 한 번만 센다.
+CREATE VIEW v_feature_tc_count_by_owner AS
+SELECT o.owner, l.id AS feature_id,
+  (SELECT COUNT(*) FROM scenario s WHERE s.feature_id = l.id) AS scenario_count,
+  (SELECT COUNT(*) FROM v_scenario_tc_count_by_owner c
+    WHERE c.owner = o.owner AND c.feature_id = l.id AND c.tc_count = 0) AS uncovered_scenario_count,
+  (SELECT COUNT(*) FROM v_feature_tc ft JOIN tc t ON t.id = ft.tc_id
+    WHERE ft.feature_id = l.id AND t.owner = o.owner) AS tc_count
+FROM v_tc_owner o CROSS JOIN v_leaf_feature l;
+
+-- 운영 조직(owner)별, 기능별 하위 트리 집계. owner가 그 값인 TC만 센다. 같은 TC는 한 번만 센다.
+CREATE VIEW v_subtree_tc_count_by_owner AS
+SELECT o.owner, f.id AS feature_id,
+  (SELECT COUNT(*) FROM v_feature_subtree st WHERE st.ancestor_id = f.id) AS leaf_count,
+  (SELECT COUNT(*) FROM v_feature_subtree st
+    WHERE st.ancestor_id = f.id
+      AND NOT EXISTS (SELECT 1 FROM v_feature_tc ft JOIN tc t ON t.id = ft.tc_id
+                      WHERE ft.feature_id = st.feature_id AND t.owner = o.owner)) AS uncovered_leaf_count,
+  (SELECT COUNT(DISTINCT ft.tc_id) FROM v_feature_subtree st
+    JOIN v_feature_tc ft ON ft.feature_id = st.feature_id
+    JOIN tc t ON t.id = ft.tc_id
+    WHERE st.ancestor_id = f.id AND t.owner = o.owner) AS tc_count
+FROM v_tc_owner o CROSS JOIN feature f;
+
+-- 실행 환경(platform)별, 인스턴스 시나리오별 TC 개수. platform가 그 값인 TC만 센다.
+-- tc_count가 0이면 그 platform의 TC로는 검증되지 않는 인스턴스 시나리오다.
+CREATE VIEW v_scenario_tc_count_by_platform AS
+SELECT o.platform, s.id AS scenario_id, s.feature_id,
+  (SELECT COUNT(*) FROM scenario_tc r JOIN tc t ON t.id = r.tc_id
+    WHERE r.scenario_id = s.id AND t.platform = o.platform) AS tc_count
+FROM v_tc_platform o CROSS JOIN scenario s;
+
+-- 실행 환경(platform)별, 말단 기능별 집계. platform가 그 값인 TC만 센다. 같은 TC는 한 번만 센다.
+CREATE VIEW v_feature_tc_count_by_platform AS
+SELECT o.platform, l.id AS feature_id,
+  (SELECT COUNT(*) FROM scenario s WHERE s.feature_id = l.id) AS scenario_count,
+  (SELECT COUNT(*) FROM v_scenario_tc_count_by_platform c
+    WHERE c.platform = o.platform AND c.feature_id = l.id AND c.tc_count = 0) AS uncovered_scenario_count,
+  (SELECT COUNT(*) FROM v_feature_tc ft JOIN tc t ON t.id = ft.tc_id
+    WHERE ft.feature_id = l.id AND t.platform = o.platform) AS tc_count
+FROM v_tc_platform o CROSS JOIN v_leaf_feature l;
+
+-- 실행 환경(platform)별, 기능별 하위 트리 집계. platform가 그 값인 TC만 센다. 같은 TC는 한 번만 센다.
+CREATE VIEW v_subtree_tc_count_by_platform AS
+SELECT o.platform, f.id AS feature_id,
+  (SELECT COUNT(*) FROM v_feature_subtree st WHERE st.ancestor_id = f.id) AS leaf_count,
+  (SELECT COUNT(*) FROM v_feature_subtree st
+    WHERE st.ancestor_id = f.id
+      AND NOT EXISTS (SELECT 1 FROM v_feature_tc ft JOIN tc t ON t.id = ft.tc_id
+                      WHERE ft.feature_id = st.feature_id AND t.platform = o.platform)) AS uncovered_leaf_count,
+  (SELECT COUNT(DISTINCT ft.tc_id) FROM v_feature_subtree st
+    JOIN v_feature_tc ft ON ft.feature_id = st.feature_id
+    JOIN tc t ON t.id = ft.tc_id
+    WHERE st.ancestor_id = f.id AND t.platform = o.platform) AS tc_count
+FROM v_tc_platform o CROSS JOIN feature f;

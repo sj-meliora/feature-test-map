@@ -10,6 +10,7 @@
 import hashlib
 import os
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -51,8 +52,11 @@ def jsonl(*records):
     return "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in records)
 
 
-def tc(id, suite="suite/a", name=None, source_file="test.py"):
-    return {"id": id, "suite": suite, "name": name or f"tc_{id}", "source_file": source_file}
+def tc(id, suite="suite/a", name=None, source_file="test.py", owner="sv", platform="msvp"):
+    return {
+        "id": id, "suite": suite, "name": name or f"tc_{id}", "source_file": source_file,
+        "owner": owner, "platform": platform,
+    }
 
 
 class Base(unittest.TestCase):
@@ -158,7 +162,13 @@ class QueryExamples(Base):
         self.assertIn(f"인스턴스 시나리오 원본: {self.data.resolve() / 'scenarios.yaml'}", result.stdout)
         for line in ("- feature: 8", "- scenario: 9", "- tc: 20", "- scenario_tc: 19"):
             self.assertIn(line, result.stdout)
-        for view in ("v_feature_tc", "v_scenario_tc_count", "v_feature_tc_count", "v_subtree_tc_count", "v_unlinked_tc"):
+        views = ["v_feature_tc", "v_scenario_tc_count", "v_feature_tc_count", "v_subtree_tc_count", "v_unlinked_tc"]
+        for axis in ("owner", "platform"):
+            views += [
+                f"v_tc_{axis}", f"v_scenario_tc_count_by_{axis}", f"v_feature_tc_count_by_{axis}",
+                f"v_subtree_tc_count_by_{axis}",
+            ]
+        for view in views:
             self.assertIn(f"CREATE VIEW {view} AS", result.stdout)
         self.assertIn("CREATE TABLE feature", result.stdout)
         self.assertIn("CREATE VIEW v_leaf_feature", result.stdout)
@@ -623,6 +633,83 @@ class AggregateViews(Base):
         self.assertEqual(self.rows(self.sql("SELECT id FROM v_unlinked_tc ORDER BY id")), [["18"], ["19"], ["20"]])
 
 
+class ClassViews(Base):
+    """TC의 분류(owner, platform)별 집계 뷰가 예시 데이터에서 내는 결과를 확인한다."""
+
+    def setUp(self):
+        super().setUp()
+        self.assertEqual(self.build().returncode, 0)
+
+    def test_gaps_by_owner(self):
+        self.assertEqual(
+            self.rows(self.sql(
+                "SELECT owner, scenario_id FROM v_scenario_tc_count_by_owner WHERE tc_count = 0 ORDER BY 1, 2"
+            )),
+            [
+                ["sv", "NS-CREATE-S2"], ["sv", "PS-TRANSITION-S1"], ["sv", "SANITIZE-S1"], ["sv", "SANITIZE-S2"],
+                ["sw-dev", "NS-DELETE-S1"], ["sw-dev", "PS-TRANSITION-S1"], ["sw-dev", "SANITIZE-S2"],
+                ["sw-dev", "SPOR-S1"],
+            ],
+        )
+        self.assertEqual(
+            self.rows(self.sql(
+                "SELECT owner, feature_id FROM v_feature_tc_count_by_owner WHERE tc_count = 0 ORDER BY 1, 2"
+            )),
+            [
+                ["sv", "PS-TRANSITION"], ["sv", "SANITIZE"],
+                ["sw-dev", "NS-DELETE"], ["sw-dev", "PS-TRANSITION"], ["sw-dev", "SPOR"],
+            ],
+        )
+
+    def test_feature_counts_by_platform(self):
+        rows = self.rows(self.sql(
+            "SELECT feature_id, scenario_count, uncovered_scenario_count, tc_count "
+            "FROM v_feature_tc_count_by_platform WHERE platform = 'msvp' ORDER BY 1"
+        ))
+        self.assertEqual(rows, [
+            ["FLUSH", "1", "0", "2"],
+            ["FORMAT", "1", "0", "2"],
+            ["NS-CREATE", "2", "1", "2"],
+            ["NS-DELETE", "1", "0", "2"],
+            ["PS-TRANSITION", "1", "1", "0"],
+            ["SANITIZE", "2", "2", "0"],
+            ["SPOR", "1", "0", "4"],
+        ])
+
+    def test_subtree_counts_by_owner(self):
+        rows = self.rows(self.sql(
+            "SELECT owner, feature_id, leaf_count, uncovered_leaf_count, tc_count FROM v_subtree_tc_count_by_owner "
+            "WHERE feature_id IN ('NS', 'SANITIZE') ORDER BY 1, 2"
+        ))
+        self.assertEqual(rows, [
+            ["sv", "NS", "2", "0", "3"],
+            ["sv", "SANITIZE", "1", "1", "0"],
+            ["sw-dev", "NS", "2", "1", "2"],
+            ["sw-dev", "SANITIZE", "1", "0", "3"],
+        ])
+
+    def test_class_counts_add_up_to_the_whole(self):
+        """TC마다 값이 하나이므로, 분류별 TC 개수를 더하면 전체 TC 개수와 같다."""
+        for axis in ("owner", "platform"):
+            diff = self.rows(self.sql(
+                f"SELECT COUNT(*) FROM v_scenario_tc_count a WHERE a.tc_count <> "
+                f"(SELECT SUM(b.tc_count) FROM v_scenario_tc_count_by_{axis} b WHERE b.scenario_id = a.scenario_id)"
+            ))
+            self.assertEqual(diff, [["0"]])
+
+    def test_value_without_tc_is_reported_as_gap(self):
+        """그 값을 가진 TC가 하나도 없어도, 분류별 집계에는 모든 기능이 검증되지 않은 것으로 나타난다."""
+        lines = (self.data / "tcs.jsonl").read_text(encoding="utf-8").replace('"hapsim"', '"msvp"')
+        self.write("tcs.jsonl", lines)
+        self.assertEqual(self.build().returncode, 0)
+        self.assertEqual(
+            self.rows(self.sql(
+                "SELECT COUNT(*), SUM(tc_count) FROM v_feature_tc_count_by_platform WHERE platform = 'hapsim'"
+            )),
+            [["7", "0"]],
+        )
+
+
 class OtherSourceValidation(Base):
     """인스턴스 시나리오, TC, 시나리오-TC 관계의 검증 규칙(design/dp4.md 4장)을 확인한다."""
 
@@ -705,13 +792,54 @@ class OtherSourceValidation(Base):
         self.assertNotIn("따옴표", result.stderr)
 
     def test_tc_keys(self):
-        self.write("tcs.jsonl", '{"id": 1, "suite": "s", "name": "n"}\n{"id": 2, "suite": "s", "name": "m", "source_file": "f", "x": 1}\n{"id": 3, "id": 4, "suite": "s", "name": "k", "source_file": "f"}\n')
+        rest = '"source_file": "f", "owner": "sv", "platform": "msvp"'
+        self.write(
+            "tcs.jsonl",
+            '{"id": 1, "suite": "s", "name": "n", "owner": "sv", "platform": "msvp"}\n'
+            f'{{"id": 2, "suite": "s", "name": "m", {rest}, "x": 1}}\n'
+            f'{{"id": 3, "id": 4, "suite": "s", "name": "k", {rest}}}\n'
+            '{"id": 5, "suite": "s", "name": "j", "source_file": "f"}\n',
+        )
         self.fails(
             "tcs.jsonl: [1번째 줄] 키 source_file가 없다",
             "tcs.jsonl: [2번째 줄] 정의되지 않은 키 'x'가 있다",
             "tcs.jsonl: [3번째 줄] 키 'id'가 한 레코드 안에 두 번 나온다",
-            count=3,
+            "tcs.jsonl: [4번째 줄] 키 owner가 없다",
+            "tcs.jsonl: [4번째 줄] 키 platform가 없다",
+            count=5,
         )
+
+    def test_tc_class_rules(self):
+        """owner와 platform은 정의 파일의 값 목록에 있는 값만 받는다. 두 항목의 조합에는 제약이 없다."""
+        self.write("tcs.jsonl", jsonl(
+            tc(1, owner="sv", platform="hapsim"), tc(2, owner="sw-dev", platform="msvp"),
+            tc(3, owner="qa"), tc(4, platform="HAPSIM"), tc(5, owner=""), tc(6, platform=1),
+        ))
+        self.fails(
+            "tcs.jsonl: [3번째 줄] owner의 값 'qa'은 허용하는 값(sv, sw-dev)이 아니다",
+            "tcs.jsonl: [4번째 줄] platform의 값 'HAPSIM'은 허용하는 값(msvp, hapsim)이 아니다",
+            "tcs.jsonl: [5번째 줄] owner의 값이 비어 있다",
+            "tcs.jsonl: [6번째 줄] platform의 값 1은 문자열이 아니다",
+            count=4,
+        )
+        self.write("tcs.jsonl", jsonl(tc(1, owner="sv", platform="hapsim"), tc(2, owner="sw-dev", platform="msvp")))
+        self.assertEqual(self.build().returncode, 0)
+
+    def test_class_value_lists_match_the_table_constraints(self):
+        """값 목록 뷰와 tc 테이블의 CHECK는 정의 파일에서 함께 고친다. 둘이 어긋나지 않았는지 확인한다."""
+        conn = sqlite3.connect(":memory:")
+        self.addCleanup(conn.close)
+        conn.executescript((SKILL / "schema.sql").read_text(encoding="utf-8"))
+        owners = [r[0] for r in conn.execute("SELECT owner FROM v_tc_owner")]
+        platforms = [r[0] for r in conn.execute("SELECT platform FROM v_tc_platform")]
+        self.assertEqual((owners, platforms), (["sv", "sw-dev"], ["msvp", "hapsim"]))
+        insert = "INSERT INTO tc (suite, name, source_file, owner, platform) VALUES ('s', ?, 'f', ?, ?)"
+        for owner in owners:
+            for platform in platforms:
+                conn.execute(insert, (f"{owner}-{platform}", owner, platform))
+        for owner, platform in (("other", platforms[0]), (owners[0], "other")):
+            with self.assertRaises(sqlite3.IntegrityError):
+                conn.execute(insert, ("x", owner, platform))
 
     def test_blank_lines_are_skipped(self):
         self.write("tcs.jsonl", "\n" + jsonl(tc(1)) + "\n\n" + jsonl(tc(2)) + "\n")

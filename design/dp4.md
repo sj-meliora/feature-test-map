@@ -130,9 +130,10 @@ CREATE TABLE build_info (
 | | `id`는 `feature_id`에 `-S`와 1 이상의 정수를 붙인 형식이다. 정수는 0으로 시작하지 않는다. |
 | `features.yaml`과 `scenarios.yaml` | 모든 말단 기능은 인스턴스 시나리오를 하나 이상 가진다. |
 | `tcs.jsonl` | 한 줄이 JSON 객체 하나다. |
-| | 네 개의 키가 모두 있다. 정의되지 않은 키가 없다. |
+| | 여섯 개의 키가 모두 있다. 정의되지 않은 키가 없다. |
 | | `id`는 1 이상의 정수이며 중복되지 않는다. |
 | | `suite`, `name`, `source_file`은 비어 있지 않은 문자열이다. |
+| | `owner`와 `platform`은 정의 파일의 값 목록 뷰(`v_tc_owner`, `v_tc_platform`)에 있는 값이다. |
 | | `suite`와 `name`의 조합이 중복되지 않는다. |
 | `scenario_tc.jsonl` | 한 줄이 JSON 객체 하나다. |
 | | 두 개의 키가 모두 있다. 정의되지 않은 키가 없다. |
