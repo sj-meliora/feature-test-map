@@ -128,12 +128,12 @@ class Report(Base):
     def test_report_writes_only_the_report(self):
         installed = self.install_copy()
         self.assertEqual(self.build(skill=installed).returncode, 0)
-        before = (self.snapshot(self.data), self.snapshot(installed))
+        before = (self.snapshot(self.data), self.snapshot(installed.parent.parent))
         self.assertEqual(self.make(skill=installed).returncode, 0)
         after = self.snapshot(self.data)
         self.assertEqual(set(after) - set(before[0]), {"build/report.html"})
         self.assertEqual({k: v for k, v in after.items() if k != "build/report.html"}, before[0])
-        self.assertEqual(self.snapshot(installed), before[1])
+        self.assertEqual(self.snapshot(installed.parent.parent), before[1])
 
     def test_report_depends_only_on_common(self):
         """보고서 명령은 조회 스크립트와 변환 명령을 불러오지 않는다. 나중에 분리할 수 있게 하기 위해서다."""

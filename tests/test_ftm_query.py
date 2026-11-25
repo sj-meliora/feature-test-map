@@ -70,12 +70,16 @@ class Base(unittest.TestCase):
             shutil.copy(EXAMPLES / name, self.data / name)
         self.db = self.data / "build" / "ftm.db"
 
-    def install_copy(self):
-        """스킬 폴더와 공용 폴더(lib)를 저장소와 같은 배치로 복사하고, 복사한 스킬 폴더를 돌려준다."""
+    def install_copy(self, with_lib=True):
+        """스킬 폴더와 공용 폴더(lib)를 저장소와 같은 배치로 복사하고, 복사한 스킬 폴더를 돌려준다.
+
+        with_lib가 거짓이면 공용 폴더를 복사하지 않는다.
+        """
         root = self.tmp / "installed"
         ignore = shutil.ignore_patterns("__pycache__")
         shutil.copytree(SKILL, root / "skills" / "ftm-query", ignore=ignore)
-        shutil.copytree(LIB, root / "lib", ignore=ignore)
+        if with_lib:
+            shutil.copytree(LIB, root / "lib", ignore=ignore)
         return root / "skills" / "ftm-query"
 
     def run_script(self, name, *args, skill=SKILL, env_value="__data__"):
@@ -433,14 +437,14 @@ class ReadOnly(Base):
         self.assertEqual(self.rows(self.sql("SELECT COUNT(*) FROM feature")), [["8"]])
 
     def test_query_writes_no_file(self):
-        """조회 스크립트는 데이터 폴더와 스킬 폴더에 어떤 파일도 쓰지 않는다."""
+        """조회 스크립트는 데이터 폴더, 스킬 폴더, 공용 폴더에 어떤 파일도 쓰지 않는다."""
         installed = self.install_copy()
         self.assertEqual(self.build(skill=installed).returncode, 0)
-        before = (self.snapshot(self.data), self.snapshot(installed))
+        before = (self.snapshot(self.data), self.snapshot(installed.parent.parent))
         self.assertEqual(self.query("schema", skill=installed).returncode, 0)
         self.assertEqual(self.sql("SELECT * FROM v_feature_subtree", skill=installed).returncode, 0)
         self.assertNotEqual(self.sql("DELETE FROM feature", skill=installed).returncode, 0)
-        self.assertEqual((self.snapshot(self.data), self.snapshot(installed)), before)
+        self.assertEqual((self.snapshot(self.data), self.snapshot(installed.parent.parent)), before)
 
     def test_build_does_not_change_source(self):
         before = (self.data / "features.yaml").read_bytes()
