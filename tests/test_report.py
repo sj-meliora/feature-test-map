@@ -126,8 +126,7 @@ class Report(Base):
         self.assertEqual(self.report.read_text(encoding="utf-8").split('"generated_at"')[0], old.split('"generated_at"')[0])
 
     def test_report_writes_only_the_report(self):
-        installed = self.tmp / "installed" / "ftm-query"
-        shutil.copytree(SKILL, installed, ignore=shutil.ignore_patterns("__pycache__"))
+        installed = self.install_copy()
         self.assertEqual(self.build(skill=installed).returncode, 0)
         before = (self.snapshot(self.data), self.snapshot(installed))
         self.assertEqual(self.make(skill=installed).returncode, 0)
